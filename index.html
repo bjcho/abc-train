@@ -209,6 +209,8 @@ button:focus-visible{outline:5px solid var(--ink); outline-offset:4px}
 .nb{z-index:2; touch-action:none}
 .nb svg{display:block; overflow:visible}
 .nb.lit{filter:drop-shadow(0 0 14px #FFD66B) drop-shadow(0 0 5px #FFF3B0)}
+.nb .gotstar{position:absolute; right:-6%; top:-8%; font-size:38%; line-height:1; animation:starpop .5s cubic-bezier(.3,1.6,.5,1) both; pointer-events:none}
+@keyframes starpop{0%{transform:scale(0) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
 .bub{width:100%; height:100%; border-radius:50%; display:grid; place-items:center;
   background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0 7%, rgba(255,255,255,.25) 8% 38%, rgba(186,224,255,.28) 68%, rgba(255,182,232,.42) 100%);
   box-shadow:inset 0 0 0 4px rgba(255,255,255,.75), inset -12px -16px 26px rgba(160,120,255,.22)}
@@ -1320,25 +1322,49 @@ function musicThemed(l, next, kind) {
     const objs = labels.map((x, i) => {
       const s = 214 - i * 12, cx = 280 + i * 210, col = PAL[(i + 2) % 6];
       let html, top;
-      if (kind === 'apple') { html = appleSVG(x); top = 320 + (i % 2) * 44; const st = mk('div', 'abs stem'); at(st, cx - 3, 250); st.style.height = (top - 250 + 24) + 'px'; scene.append(st); }
+      if (kind === 'apple') { html = appleSVG(x); top = 320 + (i % 2) * 44; var st = mk('div', 'abs stem'); at(st, cx - 3, 250); st.style.height = (top - 250 + 24) + 'px'; scene.append(st); }
       else if (kind === 'bubble') { html = `<div class="bub bobi L" style="color:${col[0]};--d:${i * -.45}s">${capHTML(x)}</div>`; top = 500 - s / 2 + (i % 2) * 40; }
       else if (kind === 'cookie') { html = cookieSVG(x); top = 680 - s; }
       else if (kind.startsWith('emo:')) { html = tagged(kind.slice(4), x); top = 730 - s; }
       else { html = drumSVG(x, col); top = 800 - s; }
       const b = mk('button', 'abs nb popin', html); b.type = 'button'; b.setAttribute('aria-label', x);
       b.style.width = b.style.height = s + 'px'; b.style.fontSize = (s * (kind.startsWith('emo:') ? .78 : .5)) + 'px'; b.style.animationDelay = (i * .08) + 's';
-      at(b, cx - s / 2, top); scene.append(b);
+      at(b, cx - s / 2, top); scene.append(b); if (kind === 'apple') b._stem = st;
       b.addEventListener('pointerdown', e => {
         e.preventDefault(); ac(); play(i); anim(b, kind === 'apple' ? 'swing' : 'ring');
         if (busy) return;
         if (x === l && !b.classList.contains('lit')) {
-          b.classList.add('lit'); lit++; say(l); sparks(cx, top + s / 2, 10);
-          if (lit === 3) { busy = true; later(() => tune(objs), 1000); }
+          b.classList.add('lit'); lit++; say(l); sfx.ding(); sparks(cx, top + s / 2, 16);
+          if (kind === 'apple') dropApple(b, cx, top, s);
+          else b.append(mk('span', 'gotstar', '⭐'));
+          if (lit === 3) { busy = true; later(() => tune(objs), kind === 'apple' ? 2300 : 1000); }
         }
       });
       return b;
     });
     later(() => speak(round === 0 ? ['Tap every', l] : ['Again!', 'Tap every', l]), 600);
+  }
+  // right apple: falls off the tree, bounces, rolls to the alligator and gets eaten
+  function dropApple(b, cx, top, s) {
+    b.style.pointerEvents = 'none'; b.classList.remove('swing');
+    const dy = 890 - (top + s);
+    const st = b._stem; if (st) { st.style.transition = 'opacity .3s'; st.style.opacity = 0; }
+    const fall = b.animate([
+      { transform: 'translate(0,0) rotate(0)', easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: `translate(0,${dy}px) rotate(20deg)`, offset: .55, easing: 'cubic-bezier(0,.4,.5,1)' },
+      { transform: `translate(0,${dy - 90}px) rotate(35deg)`, offset: .75, easing: 'cubic-bezier(.5,0,1,.6)' },
+      { transform: `translate(0,${dy}px) rotate(45deg)` }
+    ], { duration: 950, fill: 'forwards' });
+    later(() => { sfx.boop(); sparks(cx, 880, 8); }, 520);
+    fall.onfinish = () => {
+      const gx = 1505 - cx, gy = 800 - (top + s / 2);
+      b.animate([
+        { transform: `translate(0,${dy}px) rotate(45deg) scale(1)`, opacity: 1 },
+        { transform: `translate(${gx}px,${gy}px) rotate(400deg) scale(.25)`, opacity: 1, offset: .85 },
+        { transform: `translate(${gx}px,${gy}px) rotate(420deg) scale(0)`, opacity: 0 }
+      ], { duration: 700, easing: 'ease-in', fill: 'forwards' });
+      later(() => { sfx.chomp(); anim(ani, 'squish'); }, 600);
+    };
   }
   function tune(objs) {
     speak(['Listen!']); anim(ani, 'hop');
