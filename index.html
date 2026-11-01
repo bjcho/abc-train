@@ -494,7 +494,7 @@ function ac() {
       if (acCheck && now - acCheck.at > 400 && actx.currentTime === acCheck.t) { resetAudio(); return actx; }
       acCheck = { at: now, t: actx.currentTime };
     }
-    if (actx.state !== 'running') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
+    if (actx.state !== 'running' && !pausedByUs) { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
   } catch (e) { actx = null; }
   return actx;
 }
@@ -565,11 +565,22 @@ function unlockAudio() {
 // iOS only counts touchend / click as a real tap for unlocking sound (not pointerdown).
 ['touchend', 'pointerup', 'click'].forEach(t => addEventListener(t, unlockAudio, { capture: true }));
 // Coming back to the app (from home screen or another app) leaves iOS audio paused.
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) return;
-  acCheck = null;
-  if (actx && actx.state !== 'running') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
-});
+// Leaving the app pauses every sound (voice, music, effects) exactly where it is;
+// coming back resumes it. If iOS refuses to resume without a tap, the next tap does it.
+var pausedByUs = false;
+function pauseAll() {
+  if (pausedByUs) return; pausedByUs = true; acCheck = null;
+  if (actx && actx.state === 'running') { const r = actx.suspend(); if (r && r.catch) r.catch(() => {}); }
+  if (canSpeak) try { speechSynthesis.pause(); } catch (e) {}
+}
+function resumeAll() {
+  if (!pausedByUs) return; pausedByUs = false; acCheck = null;
+  if (actx && actx.state !== 'running' && actx.state !== 'closed') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
+  if (canSpeak) try { speechSynthesis.resume(); } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { document.hidden ? pauseAll() : resumeAll(); });
+addEventListener('pagehide', pauseAll);
+addEventListener('pageshow', () => { if (!document.hidden) resumeAll(); });
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 /* fullscreen: re-enter on every tap while the parent setting is on */
@@ -634,7 +645,7 @@ function playClips(parts) {
 }
 function speak(parts) {
   if (playClips(parts)) return;
-  if (!canSpeak) return;
+  if (!canSpeak || pausedByUs) return;
   try {
     const go = () => {
       try { speechSynthesis.resume(); } catch (e) {}
