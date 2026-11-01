@@ -465,20 +465,33 @@ function loop(fn) {
   requestAnimationFrame(f);
 }
 scene.addEventListener('animationend', e => { if (e.target.classList) e.target.classList.remove('popin', 'drop'); });
-function clearScene() { epoch++; quiet = false; scene.innerHTML = ''; if (canSpeak) speechSynthesis.cancel(); }
+function clearScene() { epoch++; quiet = false; scene.innerHTML = ''; try { voiceSrcs.forEach(s => s.stop()); voiceSrcs = []; } catch (e) {} if (canSpeak) speechSynthesis.cancel(); }
 
 /* ================= audio ================= */
-let actx = null, master = null, noiseBuf = null;
+let actx = null, master = null, voiceOut = null, noiseBuf = null, acCheck = null;
+// iOS sometimes leaves the audio clock frozen after an interruption: throw it away and start fresh.
+function resetAudio() {
+  const old = actx; actx = null; acCheck = null;
+  try { old && old.close(); } catch (e) {}
+  ac(); if (musicOn) setMusic(true);
+}
 function ac() {
   try {
     if (!actx) {
       actx = new (window.AudioContext || window.webkitAudioContext)();
       const comp = actx.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 6; comp.attack.value = .003; comp.release.value = .2; comp.connect(actx.destination);
       master = actx.createGain(); master.gain.value = 3; master.connect(comp);
+      voiceOut = actx.createGain(); voiceOut.gain.value = 1.4; voiceOut.connect(comp);
+      actx.onstatechange = () => { acCheck = null; };
       noiseBuf = actx.createBuffer(1, actx.sampleRate * .5, actx.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
     if (actx.state === 'closed') { actx = null; return ac(); }
+    if (actx.state === 'running') {
+      const now = performance.now();
+      if (acCheck && now - acCheck.at > 400 && actx.currentTime === acCheck.t) { resetAudio(); return actx; }
+      acCheck = { at: now, t: actx.currentTime };
+    }
     if (actx.state !== 'running') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
   } catch (e) { actx = null; }
   return actx;
@@ -545,14 +558,15 @@ function unlockAudio() {
     try { speechSynthesis.resume(); const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
   }
   if (musicOn && !musicTimer) setMusic(true);
+  loadClips();
 }
 // iOS only counts touchend / click as a real tap for unlocking sound (not pointerdown).
 ['touchend', 'pointerup', 'click'].forEach(t => addEventListener(t, unlockAudio, { capture: true }));
 // Coming back to the app (from home screen or another app) leaves iOS audio paused.
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return;
+  acCheck = null;
   if (actx && actx.state !== 'running') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
-  if (canSpeak) try { speechSynthesis.resume(); } catch (e) {}
 });
 document.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -585,7 +599,39 @@ function loadVoices() {
   voice = voices.find(v => v.voiceURI === want) || ok.find(v => /samantha/i.test(v.name)) || ok.find(v => /google/i.test(v.name)) || ok.find(v => v.localService) || ok[0] || us[0] || voices[0] || null;
 }
 if (canSpeak) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', loadVoices); }
+/* recorded voice clips (audio/voice.json maps each phrase to an mp3) */
+const clips = {}; let clipMap = null, clipsLoading = false, voiceSrcs = [];
+const clipKey = t => /^[a-z]$/.test(t) ? t.toUpperCase() : t;
+function loadClips() {
+  if (clipsLoading || !ac()) return; clipsLoading = true;
+  fetch('audio/voice.json').then(r => r.json()).then(m => {
+    clipMap = m;
+    // letters first so they are ready soonest
+    const keys = Object.keys(m).sort((a, b) => a.length - b.length);
+    let i = 0;
+    const next = () => {
+      if (i >= keys.length) return;
+      const k = keys[i++];
+      fetch('audio/' + m[k]).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => actx.decodeAudioData(b, ok, no)))
+        .then(buf => { clips[k] = buf; }).catch(() => {}).then(next);
+    };
+    for (let j = 0; j < 6; j++) next();
+  }).catch(() => { clipsLoading = false; });
+}
+function playClips(parts) {
+  const a = ac(); if (!a || !voiceOut) return false;
+  const bufs = parts.map(t => clips[clipKey(String(t).trim())]);
+  if (!bufs.length || bufs.some(b => !b)) return false;
+  voiceSrcs.forEach(s => { try { s.stop(); } catch (e) {} }); voiceSrcs = [];
+  let t = a.currentTime + .03;
+  for (const b of bufs) {
+    const s = a.createBufferSource(); s.buffer = b; s.connect(voiceOut); s.start(t);
+    voiceSrcs.push(s); t += b.duration + .08;
+  }
+  return true;
+}
 function speak(parts) {
+  if (playClips(parts)) return;
   if (!canSpeak) return;
   try {
     const go = () => {
@@ -600,6 +646,7 @@ function speak(parts) {
     if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(go, 80); } else go();
   } catch (e) {}
 }
+loadClips(); // start loading the voice right away; the first tap only has to switch sound on
 const say = l => speak([l]);
 const praise = () => speak([pick(PRAISE)]);
 
