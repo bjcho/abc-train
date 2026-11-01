@@ -1,6 +1,6 @@
 // ABC 기차 service worker: keeps the game playable offline.
 // When you update index.html, bump VERSION so iPads pick up the new files.
-const VERSION = 'abc-train-v1';
+const VERSION = 'abc-train-v2';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

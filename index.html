@@ -473,10 +473,12 @@ function ac() {
   try {
     if (!actx) {
       actx = new (window.AudioContext || window.webkitAudioContext)();
-      master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination);
+      const comp = actx.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 6; comp.attack.value = .003; comp.release.value = .2; comp.connect(actx.destination);
+      master = actx.createGain(); master.gain.value = 3; master.connect(comp);
       noiseBuf = actx.createBuffer(1, actx.sampleRate * .5, actx.sampleRate);
       const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     }
+    if (actx.state === 'closed') { actx = null; return ac(); }
     if (actx.state !== 'running') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
   } catch (e) { actx = null; }
   return actx;
@@ -533,17 +535,25 @@ function drawMusicBtn() {
 }
 drawMusicBtn();
 $('#musicBtn').addEventListener('click', () => setMusic(!musicOn));
-let unlocked = false;
+let speechReady = false;
 try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
 function unlockAudio() {
   const a = ac();
   if (a) { try { const b = a.createBuffer(1, 1, 22050), s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start(0); } catch (e) {} }
-  if (unlocked) return;
-  unlocked = true;
-  if (canSpeak) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} }
-  if (musicOn) setMusic(true);
+  if (canSpeak && !speechReady) {
+    speechReady = true;
+    try { speechSynthesis.resume(); const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+  }
+  if (musicOn && !musicTimer) setMusic(true);
 }
-['pointerdown', 'touchend', 'click'].forEach(t => addEventListener(t, unlockAudio, { capture: true }));
+// iOS only counts touchend / click as a real tap for unlocking sound (not pointerdown).
+['touchend', 'pointerup', 'click'].forEach(t => addEventListener(t, unlockAudio, { capture: true }));
+// Coming back to the app (from home screen or another app) leaves iOS audio paused.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (actx && actx.state !== 'running') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
+  if (canSpeak) try { speechSynthesis.resume(); } catch (e) {}
+});
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 /* fullscreen: re-enter on every tap while the parent setting is on */
@@ -570,19 +580,24 @@ function loadVoices() {
   voices = all.filter(v => /^en[-_]US/i.test(v.lang)).concat(all.filter(v => /^en/i.test(v.lang) && !/^en[-_]US/i.test(v.lang)));
   const want = store('abc2-voice');
   const us = voices.filter(v => /^en[-_]US/i.test(v.lang));
-  voice = voices.find(v => v.voiceURI === want) || us.find(v => /google/i.test(v.name)) || us[0] || voices[0] || null;
+  const odd = /albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|junior|ralph|kathy|fred|eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley/i;
+  const ok = us.filter(v => !odd.test(v.name));
+  voice = voices.find(v => v.voiceURI === want) || ok.find(v => /samantha/i.test(v.name)) || ok.find(v => /google/i.test(v.name)) || ok.find(v => v.localService) || ok[0] || us[0] || voices[0] || null;
 }
 if (canSpeak) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', loadVoices); }
 function speak(parts) {
   if (!canSpeak) return;
   try {
-    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
-    for (const t of parts) {
-      const u = new SpeechSynthesisUtterance(t);
-      u.lang = voice ? voice.lang.replace('_', '-') : 'en-US'; if (voice) u.voice = voice;
-      u.rate = rate; u.pitch = 1.12;
-      speechSynthesis.speak(u);
-    }
+    const go = () => {
+      try { speechSynthesis.resume(); } catch (e) {}
+      for (const t of parts) {
+        const u = new SpeechSynthesisUtterance(t);
+        u.lang = voice ? voice.lang.replace('_', '-') : 'en-US'; if (voice) u.voice = voice;
+        u.rate = rate; u.pitch = 1.12; u.volume = 1;
+        speechSynthesis.speak(u);
+      }
+    };
+    if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(go, 80); } else go();
   } catch (e) {}
 }
 const say = l => speak([l]);
