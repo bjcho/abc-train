@@ -617,7 +617,7 @@ const clips = {}; let clipMap = null, clipsLoading = false, voiceSrcs = [];
 const clipKey = t => /^[a-z]$/.test(t) ? t.toUpperCase() : t;
 function loadClips() {
   if (clipsLoading || !ac()) return; clipsLoading = true;
-  fetch('audio/voice.json?k1').then(r => r.json()).then(m => {
+  fetch('audio/voice.json?a1').then(r => r.json()).then(m => {
     clipMap = m;
     // letters first so they are ready soonest
     const keys = Object.keys(m).sort((a, b) => a.length - b.length);
