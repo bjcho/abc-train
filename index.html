@@ -1,0 +1,1955 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ABC 기차">
+<meta name="theme-color" content="#F6FAFF">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>ABC 기차</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6FAFF; --panel:#FFFFFF; --ink:#2A3654; --line:#D9E3F0; --sky:#EAF5FF; --hill:#DDF3C9; --hill2:#CBEBB0;
+  --font-letter:"Baloo 2","Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#16223A; --panel:#22314F; --ink:#F2F6FF; --line:#0F1A2E; --sky:#1B2B48; --hill:#24423A; --hill2:#1E3A31; color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#16223A; --panel:#22314F; --ink:#F2F6FF; --line:#0F1A2E; --sky:#1B2B48; --hill:#24423A; --hill2:#1E3A31; color-scheme:dark}
+html{height:100%; scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{height:100%; background:var(--bg); color:var(--ink); overflow:hidden; overscroll-behavior:none; touch-action:manipulation;
+  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; font-family:var(--font-letter)}
+button{font:inherit; color:inherit; cursor:pointer; border:none; padding:0; background:none}
+button:focus-visible{outline:5px solid var(--ink); outline-offset:4px}
+#vp{position:relative; height:100%; width:100%; overflow:hidden; background:var(--bg)}
+#stage{position:absolute; left:0; top:0; width:1600px; height:1000px; transform-origin:0 0; overflow:hidden; background:var(--bg)}
+#scene{position:absolute; inset:0}
+.abs{position:absolute}
+.L{font-family:var(--font-letter); font-weight:800; line-height:1}
+.L > span, .cap{display:block; line-height:1; text-box:trim-both cap alphabetic}
+
+/* HUD */
+.hbtn{position:absolute; top:26px; width:96px; height:96px; border-radius:50%; background:var(--panel); color:var(--ink);
+  display:grid; place-items:center; box-shadow:0 7px 0 var(--line); z-index:40; transition:transform .1s, box-shadow .1s}
+.hbtn:active{transform:translateY(5px); box-shadow:0 2px 0 var(--line)}
+.hbtn svg{width:50px; height:50px}
+#homeBtn{left:30px}
+#musicBtn{right:140px}
+#skipBtn{right:30px; width:80px; height:80px; top:34px; opacity:.75}
+#skipBtn svg{width:40px; height:40px}
+#dots{position:absolute; top:58px; left:50%; transform:translateX(-50%); display:flex; gap:16px; z-index:40}
+#dots i{width:24px; height:24px; border-radius:50%; background:var(--line); transition:transform .3s, background .3s}
+#dots i.on{background:var(--c); transform:scale(1.35)}
+#dots i.done{background:var(--c); opacity:.45}
+#badge{position:absolute; left:34px; top:846px; width:126px; height:126px; border-radius:30px; background:var(--panel);
+  box-shadow:0 7px 0 var(--line); display:grid; place-items:center; font-size:96px; z-index:40; transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
+#badge.hide{transform:scale(0)}
+.hidden{display:none !important}
+
+/* train */
+.sky{position:absolute; inset:0; background:linear-gradient(var(--sky), var(--bg) 70%)}
+.cloud{position:absolute; width:220px; height:70px; border-radius:40px; background:var(--panel); opacity:.9; animation:drift 40s linear infinite}
+.cloud::before,.cloud::after{content:""; position:absolute; background:inherit; border-radius:50%}
+.cloud::before{width:100px; height:100px; left:40px; top:-50px}
+.cloud::after{width:80px; height:80px; left:110px; top:-34px}
+@keyframes drift{from{transform:translateX(0)} to{transform:translateX(-300px)}}
+.hill{position:absolute; border-radius:50%; background:var(--hill)}
+.scroller{position:absolute; left:0; top:150px; width:1600px; height:800px; overflow-x:auto; overflow-y:hidden; touch-action:pan-x; scrollbar-width:none}
+.scroller::-webkit-scrollbar{display:none}
+.track{position:relative; height:100%; display:flex; align-items:flex-end; width:max-content; padding:0 520px 60px 60px}
+.rail{position:absolute; left:0; right:0; bottom:38px; height:30px;
+  background:linear-gradient(#B9A58F,#B9A58F) 0 4px/100% 8px no-repeat, repeating-linear-gradient(90deg,#C9B49B 0 26px,transparent 26px 70px) 0 12px/100% 18px no-repeat}
+.engine{position:relative; width:440px; height:460px; flex:none}
+.engine svg{width:100%; height:100%}
+.puff{position:absolute; left:325px; top:120px; width:60px; height:60px; border-radius:50%; background:var(--panel); opacity:0; pointer-events:none}
+.engine.toot .puff{animation:puff 1.4s ease-out}
+.engine.toot .puff:nth-child(3){animation-delay:.25s}
+.engine.toot .puff:nth-child(4){animation-delay:.5s}
+@keyframes puff{0%{opacity:.95; transform:translate(0,0) scale(.5)}100%{opacity:0; transform:translate(-80px,-150px) scale(1.8)}}
+.car{position:relative; width:340px; height:460px; flex:none}
+.car .ani{position:absolute; left:50%; bottom:222px; width:200px; height:270px; margin-left:-100px; animation:bob 2.4s ease-in-out infinite; animation-delay:var(--d)}
+.car .ani svg,.big-ani svg,.nextTag .e svg{width:100%; height:100%; display:block}
+.car .body{position:absolute; left:20px; bottom:86px; width:300px; height:172px; border-radius:30px; background:var(--c);
+  box-shadow:inset 0 -18px 0 rgba(0,0,0,.08), inset 0 16px 0 rgba(255,255,255,.22); display:grid; place-items:center;
+  color:#fff; font-size:150px; text-shadow:0 5px 0 rgba(0,0,0,.12)}
+.car .wheel{position:absolute; bottom:46px; width:84px; height:84px; border-radius:50%; background:#fff; border:16px solid var(--e)}
+.car .wheel::after{content:""; position:absolute; inset:16px; border-radius:50%; background:var(--e)}
+.car .w1{left:52px} .car .w2{right:52px}
+.car .hook{position:absolute; left:-14px; bottom:120px; width:44px; height:16px; border-radius:8px; background:#8A97B3}
+.car .star{position:absolute; right:6px; bottom:228px; width:76px; height:76px; display:none}
+.car.done .star{display:block}
+.car:active .body{transform:translateY(6px)}
+.car.next .body{animation:nudge 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-12px)}}
+@keyframes nudge{0%,100%{transform:translateY(0)}12%{transform:translateY(-16px)}24%{transform:translateY(0)}36%{transform:translateY(-8px)}48%{transform:translateY(0)}}
+.note{position:absolute; left:200px; right:200px; top:40px; text-align:center; font-family:system-ui,sans-serif; font-size:32px; color:var(--ink); opacity:.75}
+
+/* lesson pieces */
+.big-ani{width:300px; height:405px}
+.drop{animation:drop .9s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes drop{0%{transform:translateY(-900px)}100%{transform:translateY(0)}}
+.squish{animation:squish .45s}
+@keyframes squish{40%{transform:scale(1.08,.9)}70%{transform:scale(.96,1.05)}}
+.hop{animation:hop .55s}
+@keyframes hop{35%{transform:translateY(-16%) scale(1.05)}70%{transform:translateY(0) scale(.97)}}
+.wiggle{animation:wiggle .45s}
+@keyframes wiggle{20%{transform:rotate(-12deg)}40%{transform:rotate(12deg)}60%{transform:rotate(-7deg)}80%{transform:rotate(7deg)}}
+.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-24px)}40%{transform:translateX(24px)}60%{transform:translateX(-14px)}80%{transform:translateX(14px)}}
+.popin{animation:popin .45s cubic-bezier(.3,1.7,.5,1) both}
+@keyframes popin{from{transform:scale(0)}}
+.lifted{z-index:20; filter:drop-shadow(0 18px 8px rgba(30,45,80,.18)); transform:scale(1.08)}
+
+.gift{width:160px; height:140px; touch-action:none; z-index:2}
+.gift .bx{position:absolute; left:8px; right:8px; bottom:0; height:112px; border-radius:16px; background:var(--c);
+  box-shadow:inset 0 -12px 0 rgba(0,0,0,.08); display:grid; place-items:center; color:#fff; font-size:84px; text-shadow:0 4px 0 rgba(0,0,0,.12)}
+.gift .lid{position:absolute; left:0; right:0; top:8px; height:30px; border-radius:12px; background:var(--e)}
+.gift .bow{position:absolute; top:-8px; width:34px; height:28px; border-radius:50%; border:8px solid var(--e); background:transparent}
+.gift .bow.l{left:44px; transform:rotate(-20deg)} .gift .bow.r{right:44px; transform:rotate(20deg)}
+
+.float{position:absolute; left:0; top:0; width:150px; height:170px; display:grid; place-items:center; font-size:170px; text-shadow:0 6px 0 rgba(0,0,0,.08); touch-action:none}
+.float > span{transition:transform .3s, opacity .3s}
+.float.gone > span{transform:scale(1.8); opacity:0}
+.flower{position:absolute; font-size:80px; line-height:1; pointer-events:none; animation:bloom 2.2s ease-out both}
+@keyframes bloom{0%{transform:scale(0) rotate(-90deg); opacity:0}18%{transform:scale(1.2) rotate(0); opacity:1}75%{opacity:1}100%{transform:scale(.9) translateY(-40px); opacity:0}}
+.spark{position:absolute; width:18px; height:18px; border-radius:50%; pointer-events:none; z-index:30}
+
+.trace-svg{touch-action:none}
+.dot{animation:pulse 1s ease-in-out infinite; transform-box:fill-box; transform-origin:center}
+@keyframes pulse{50%{transform:scale(1.3)}}
+.hand{position:absolute; font-size:110px; line-height:1; pointer-events:none; z-index:25; opacity:0; transition:opacity .25s}
+
+.seq{width:210px; height:240px; display:grid; place-items:center; font-size:240px; touch-action:none}
+.seq.slot{color:#E2E9F3; text-shadow:none}
+.seq.piece{text-shadow:0 7px 0 rgba(0,0,0,.1); z-index:3}
+
+.monster{width:320px; height:350px}
+.monster svg{width:100%; height:100%; overflow:visible}
+.monster .mouth{transform-origin:100px 116px; transition:transform .18s}
+.monster.eat .mouth{transform:scale(1.5,2.8)}
+.monster .eye{transform-origin:100px 82px; animation:blink 4s infinite; animation-delay:var(--d)}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+.food{width:170px; height:200px; touch-action:none; z-index:3; display:flex; flex-direction:column; align-items:center}
+.food .emo{font-size:118px; line-height:1}
+.food .tag{margin-top:-6px; width:84px; height:84px; border-radius:50%; background:var(--panel); box-shadow:0 5px 0 var(--line);
+  display:grid; place-items:center; font-size:62px; color:var(--ink)}
+.food.eaten{transition:left .35s ease-in, top .35s ease-in, transform .35s ease-in, opacity .35s !important; transform:scale(.2); opacity:0}
+
+.balloon{position:absolute; left:0; top:0; width:170px; height:260px; touch-action:none}
+.balloon svg{width:100%; height:100%; overflow:visible}
+.nextTag{position:absolute; right:40px; top:830px; height:140px; padding:0 34px 0 22px; border-radius:70px; background:#7DD3FC;
+  box-shadow:0 9px 0 #3BA7D6; display:flex; align-items:center; gap:14px; color:#fff; font-size:96px; z-index:30}
+.nextTag .e{display:block; width:110px; height:150px; margin-top:-40px}
+.nextTag.go{animation:popin .45s cubic-bezier(.3,1.7,.5,1) both, nudge 1.6s 1s ease-in-out infinite}
+
+#bookBtn{left:30px}
+#gearBtn{left:140px; width:80px; height:80px; top:34px; opacity:.7}
+#gearBtn svg{width:40px; height:40px}
+.apple{width:120px; height:125px; touch-action:none; cursor:pointer}
+.cookie{width:140px; height:140px; touch-action:none; z-index:3}
+.bubble{position:absolute; left:0; top:0; width:170px; height:170px; border-radius:50%; display:grid; place-items:center; font-size:96px; touch-action:none;
+  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0 7%, rgba(255,255,255,.25) 8% 38%, rgba(186,224,255,.28) 68%, rgba(255,182,232,.42) 100%);
+  box-shadow:inset 0 0 0 4px rgba(255,255,255,.75), inset -12px -16px 26px rgba(160,120,255,.22), 0 8px 20px rgba(80,120,200,.12)}
+.bubble > span{text-shadow:0 3px 0 rgba(255,255,255,.8)}
+.sticker{position:absolute; width:300px; height:300px; border-radius:50%; padding:22px 40px 10px; background:#fff; z-index:30;
+  box-shadow:0 0 0 12px #FFE27A, 0 14px 0 12px #E8B23A; transform-origin:0 0}
+.sticker svg{width:100%; height:100%}
+.overlay{position:absolute; inset:0; z-index:60; display:grid; place-items:center; background:rgba(20,33,58,.45)}
+.sheet{width:1420px; max-height:920px; overflow:auto; background:var(--panel); color:var(--ink); border-radius:40px; padding:28px 40px 36px; box-shadow:0 12px 0 var(--line); font-family:system-ui,"Noto Sans KR",sans-serif}
+.sheet-head{display:flex; align-items:center; justify-content:space-between; font-size:44px; font-weight:700; margin-bottom:20px}
+.close{width:84px; height:84px; border-radius:50%; background:var(--bg); font-size:44px; line-height:1}
+.grid{display:grid; grid-template-columns:repeat(9,140px); gap:14px; justify-content:center}
+.cell{position:relative; width:140px; height:170px; border-radius:26px; background:var(--bg); display:grid; place-items:center}
+.cell b{font-size:64px; color:var(--line)}
+.cell.got svg{width:118px; height:150px}
+.cell.got b{position:absolute; right:10px; bottom:8px; font-size:40px; color:var(--ink)}
+.pnote{font-size:28px; line-height:1.5; margin:6px 0 18px; opacity:.8}
+.vlist{display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px}
+.vbtn{padding:16px 24px; border-radius:20px; background:var(--bg); font-size:28px; text-align:left}
+.vbtn small{display:block; font-size:20px; opacity:.6}
+.vbtn.on{background:#38BDF8; color:#fff}
+.rrow{display:flex; align-items:center; gap:12px; font-size:30px}
+.rrow span{margin-right:12px}
+.pcard{width:340px; height:400px; border-radius:40px; background:var(--panel); box-shadow:0 12px 0 var(--line); display:grid; place-items:center; transition:box-shadow .2s}
+.pcard .pe{font-size:210px; line-height:1}
+.pcard .pl{position:absolute; top:18px; left:22px; width:92px; height:92px; border-radius:50%; background:#22C55E; color:#fff; font-size:64px; display:grid; place-items:center; transform:scale(0); transition:transform .35s cubic-bezier(.3,1.7,.5,1)}
+.pcard.right{box-shadow:0 0 0 12px #86EFAC, 0 12px 0 12px #4ADE80}
+.pcard.right .pl{transform:scale(1)}
+.rail2{width:1280px; height:26px; border-radius:13px; background:#C9A27E; z-index:1}
+.xbar{width:170px; border-radius:28px; background:var(--c); color:#fff; font-size:110px; display:grid; place-items:center; z-index:2; touch-action:none;
+  box-shadow:inset 0 -14px 0 rgba(0,0,0,.08), 0 10px 0 var(--e); text-shadow:0 4px 0 rgba(0,0,0,.12); transition:box-shadow .3s}
+.xbar::before,.xbar::after{content:""; position:absolute; left:50%; width:22px; height:22px; margin-left:-11px; border-radius:50%; background:rgba(255,255,255,.7)}
+.xbar::before{top:22px} .xbar::after{bottom:26px}
+.xbar.lit{box-shadow:0 0 0 10px #FFF3B0, 0 0 40px 16px rgba(255,214,107,.85), 0 10px 0 var(--e)}
+.ring{animation:ring .35s}
+@keyframes ring{30%{transform:scaleY(.94) translateY(8px)}65%{transform:scaleY(1.02)}}
+.ppiece{touch-action:none; z-index:4}
+.ppiece svg{display:block; overflow:visible}
+.themebg,.deco{pointer-events:none}
+.deco{line-height:1}
+.mound{transform-origin:50% 100%; z-index:3; touch-action:none}
+.bone{z-index:2}
+.branch{width:1300px; height:30px; border-radius:15px; background:#9C6B43}
+.stem{width:6px; background:#7A5230}
+.tray{width:1300px; height:40px; border-radius:20px; background:#D5DCE8; box-shadow:0 8px 0 #B9C3D4}
+.nb{z-index:2; touch-action:none}
+.nb svg{display:block; overflow:visible}
+.nb.lit{filter:drop-shadow(0 0 14px #FFD66B) drop-shadow(0 0 5px #FFF3B0)}
+.bub{width:100%; height:100%; border-radius:50%; display:grid; place-items:center;
+  background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.95) 0 7%, rgba(255,255,255,.25) 8% 38%, rgba(186,224,255,.28) 68%, rgba(255,182,232,.42) 100%);
+  box-shadow:inset 0 0 0 4px rgba(255,255,255,.75), inset -12px -16px 26px rgba(160,120,255,.22)}
+.bobi{animation:bob 2.6s ease-in-out infinite; animation-delay:var(--d)}
+.swing{animation:swing .6s; transform-origin:50% -70px}
+@keyframes swing{25%{transform:rotate(10deg)}60%{transform:rotate(-7deg)}}
+.carrier{position:absolute; left:0; top:0; z-index:2; touch-action:none}
+.carrier svg{display:block; overflow:visible}
+.road{width:1600px; height:26px; border-radius:13px; background:#E1E6EF}
+.water{width:1600px; height:58px; border-radius:30px 30px 0 0; background:linear-gradient(#A8DCFF,#7CC5F2); opacity:.88; z-index:3; pointer-events:none}
+.ti{position:absolute; line-height:1; text-align:center; touch-action:none}
+.ti .ie{display:block; line-height:1}
+.it{position:absolute; left:50%; bottom:-.06em; transform:translateX(-50%); font-size:.36em; width:1.5em; height:1.5em; border-radius:50%; background:#fff; color:#2A3654; box-shadow:0 .08em 0 rgba(0,0,0,.14); display:grid; place-items:center; pointer-events:none}
+.nb .ie{display:block; line-height:1; text-align:center}
+.tapobj{z-index:2}
+.tapobj.off .ie{filter:grayscale(1) brightness(.8); opacity:.6}
+.tapobj.glow .ie{filter:drop-shadow(0 0 24px #FFE27A) drop-shadow(0 0 8px #FFF3B0)}
+.tapobj.gray .ie{filter:grayscale(1) brightness(1.2); opacity:.5}
+.crk{position:absolute; left:28%; top:40%; width:44%; height:30px}
+.vine{width:960px; height:22px; border-radius:11px; background:#6FBF5A}
+.scoop{width:190px; height:170px; border-radius:50% 50% 44% 44%; display:grid; place-items:center; color:#fff; font-size:90px; touch-action:none;
+  box-shadow:inset 0 -14px 0 rgba(0,0,0,.08), inset 10px 10px 0 rgba(255,255,255,.35); text-shadow:0 3px 0 rgba(0,0,0,.14)}
+.kite{width:160px; height:280px; touch-action:none; z-index:3}
+.kite svg{display:block}
+.sway{animation:sway 2.4s ease-in-out infinite; transform-origin:50% 100%}
+@keyframes sway{50%{transform:rotate(8deg) translateY(-10px)}}
+.splash{width:220px; height:220px; border-radius:50%; background:#FFE45C; opacity:.55; z-index:1; animation:splash .5s ease-out both; pointer-events:none}
+@keyframes splash{from{transform:scale(0)}}
+.raindrop{position:absolute; width:4px; height:36px; border-radius:2px; background:#8EC5F0; opacity:.7; pointer-events:none; z-index:1}
+.pond{width:1180px; height:640px; border-radius:300px; background:linear-gradient(#9ED8F5,#7CC5F2); opacity:.85}
+.pad{width:200px; height:140px; border-radius:50%; background:#7BCB5C; color:#fff; font-size:84px; display:grid; place-items:center; z-index:3;
+  box-shadow:inset 0 -12px 0 rgba(0,0,0,.1), 0 8px 0 #5AA63F; text-shadow:0 3px 0 rgba(0,0,0,.15)}
+.hole{width:220px; height:70px; border-radius:50%; background:#5B4030; box-shadow:inset 0 10px 0 rgba(0,0,0,.25)}
+.mclip{width:220px; height:215px; overflow:hidden; z-index:2}
+.mouse{position:absolute; left:33px; top:0; transform:translateY(110%); transition:transform .3s cubic-bezier(.3,1.4,.5,1); touch-action:none}
+.mouse.up{transform:translateY(25px)}
+.jacket{z-index:2}
+.jacket svg{display:block}
+.zpull{width:80px; height:80px; border-radius:50%; background:#FFD43B; box-shadow:0 0 0 6px #fff, 0 6px 0 6px #E0B000; z-index:4; touch-action:none}
+.zpull.ok{background:#4ADE80; box-shadow:0 0 0 6px #fff, 0 6px 0 6px #22A55A}
+.wframe{width:340px; height:340px; border-radius:24px; background:#E6F4FF; border:14px solid #7FB2E5}
+.foam{width:300px; height:300px; border-radius:16px; z-index:3; touch-action:none; box-shadow:inset 0 0 30px rgba(150,190,230,.5);
+  background:radial-gradient(circle at 30% 30%, #fff 0 18%, transparent 19%), radial-gradient(circle at 70% 40%, #fff 0 22%, transparent 23%), radial-gradient(circle at 45% 70%, #fff 0 24%, transparent 25%), radial-gradient(circle at 80% 80%, #fff 0 16%, transparent 17%), #EAF4FB}
+.sandpile{width:300px; height:200px; transform-origin:50% 100%; z-index:3; touch-action:none}
+.ccard{width:340px; height:400px; border-radius:40px; background:var(--panel); box-shadow:0 12px 0 var(--line); display:grid; place-items:center; font-size:270px; text-shadow:0 6px 0 rgba(0,0,0,.08)}
+.ccard.right{box-shadow:0 0 0 12px #86EFAC, 0 12px 0 12px #4ADE80}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important}
+}
+</style>
+</head>
+<body>
+<div id="nojs" style="position:fixed;inset:0;z-index:99;display:grid;place-items:center;padding:40px;background:#F6FAFF;color:#2A3654;font:600 22px/1.6 system-ui,sans-serif;text-align:center">이 화면은 파일 미리보기라서 게임이 실행되지 않아요.<br>Safari에서 게임 링크를 열어 주세요.</div>
+<div id="vp">
+  <div id="stage">
+    <div id="scene"></div>
+    <button class="hbtn hidden" id="homeBtn" type="button" aria-label="기차로 돌아가기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/></svg>
+    </button>
+    <div id="dots" class="hidden"></div>
+    <button class="hbtn" id="musicBtn" type="button" aria-label="음악 켜기 끄기"></button>
+    <button class="hbtn" id="bookBtn" type="button" aria-label="스티커북"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H19v15H5.5A1.5 1.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5"/><path d="M11.5 8.2l1 2 2.2.3-1.6 1.5.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.5 2.2-.3z" fill="#FFC21A" stroke="#E09A00" stroke-width="1"/></svg></button>
+    <button class="hbtn" id="gearBtn" type="button" aria-label="음성 설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    <button class="hbtn hidden" id="skipBtn" type="button" aria-label="다음 놀이로 넘기기">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 5.5v13l8.5-6.5z"/><path d="M12 5.5v13l8.5-6.5z"/></svg>
+    </button>
+    <button id="badge" class="L hide hidden" type="button" aria-label="글자 다시 듣기"><span></span></button>
+  </div>
+</div>
+<script>
+(() => {
+'use strict';
+document.getElementById('nojs')?.remove();
+/* ================= data ================= */
+const L = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const ANI = {A:'🐊',B:'🐻',C:'🐱',D:'🐶',E:'🐘',F:'🐸',G:'🦒',H:'🦛',I:'🦎',J:'🐆',K:'🐨',L:'🦁',M:'🐵',N:'🐦',O:'🦉',P:'🐧',Q:'🦆',R:'🐰',S:'🐌',T:'🐢',U:'🦄',V:'🐍',W:'🐳',X:'🦊',Y:'🐂',Z:'🦓'};
+const STROKES = {
+A:['M50 10 L22 90','M50 10 L78 90','M33 62 L67 62'],
+B:['M28 10 L28 90','M28 10 L50 10 A19.5 19.5 0 0 1 50 49 L28 49','M28 49 L54 49 A20.5 20.5 0 0 1 54 90 L28 90'],
+C:['M74 24 A34 40 0 1 0 74 76'],
+D:['M28 10 L28 90','M28 10 L42 10 A38 40 0 0 1 42 90 L28 90'],
+E:['M30 10 L30 90','M30 10 L72 10','M30 50 L66 50','M30 90 L72 90'],
+F:['M30 10 L30 90','M30 10 L72 10','M30 50 L64 50'],
+G:['M74 24 A34 40 0 1 0 80 56','M80 56 L56 56'],
+H:['M28 10 L28 90','M72 10 L72 90','M28 50 L72 50'],
+I:['M50 10 L50 90','M34 10 L66 10','M34 90 L66 90'],
+J:['M64 10 L64 66 A18 22 0 0 1 28 66'],
+K:['M30 10 L30 90','M72 10 L30 56','M44 46 L74 90'],
+L:['M30 10 L30 90 L72 90'],
+M:['M24 90 L24 10 L50 62 L76 10 L76 90'],
+N:['M28 90 L28 10 L72 90 L72 10'],
+O:['M50 10 A30 40 0 1 0 50 90 A30 40 0 1 0 50 10'],
+P:['M30 10 L30 90','M30 10 L50 10 A20 20 0 0 1 50 50 L30 50'],
+Q:['M50 10 A30 40 0 1 0 50 90 A30 40 0 1 0 50 10','M56 66 L80 92'],
+R:['M30 10 L30 90','M30 10 L50 10 A20 20 0 0 1 50 50 L30 50','M48 50 L74 90'],
+S:['M72 22 C66 12 56 10 48 10 C34 10 27 18 27 29 C27 52 74 46 74 70 C74 83 63 90 50 90 C39 90 30 86 26 77'],
+T:['M24 10 L76 10','M50 10 L50 90'],
+U:['M27 10 L27 60 A23 30 0 0 0 73 60 L73 10'],
+V:['M24 10 L50 90 L76 10'],
+W:['M16 10 L33 90 L50 34 L67 90 L84 10'],
+X:['M26 10 L74 90','M74 10 L26 90'],
+Y:['M26 10 L50 50','M74 10 L50 50 L50 90'],
+Z:['M26 10 L74 10 L26 90 L74 90']
+};
+const PAL = [['#A78BFA','#7C5AE0'],['#F472B6','#D14A92'],['#84CC16','#5E9A08'],['#38BDF8','#1A93C9'],['#FBBF24','#D69A08'],['#FB7185','#DB4A60']];
+const pal = l => PAL[L.indexOf(l) % PAL.length];
+const FOODS = ['🍒','🍔','🧁','🍉','🍪','🍌','🍓','🥕','🍩','🧀'];
+const PRAISE = ['Great job!','Yay! You did it!','Awesome!','Wonderful!','Good job!'];
+const CR = {
+A:{c:'#8FD694', ears:'none', x:['frogeyes','croc']},
+B:{c:'#C99A6E', ears:'round', x:['muzzle']},
+C:{c:'#FFC9A3', ears:'tri', x:['nose','whisk']},
+D:{c:'#FFEBCF', ears:'none', x:['flop','muzzle']},
+E:{c:'#B9C6E8', ears:'elephant', x:['trunk']},
+F:{c:'#9BE08E', ears:'none', x:['frogeyes','wide']},
+G:{c:'#FFD66B', ears:'small', x:['ossicones','spots','muzzle']},
+H:{c:'#CDB9F0', ears:'tiny', x:['hippo']},
+I:{c:'#7FD8A8', ears:'none', x:['crest','wide']},
+J:{c:'#FFC46B', ears:'round', x:['spots','muzzle']},
+K:{c:'#C3CAD9', ears:'koala', x:['bignose']},
+L:{c:'#FFD66B', ears:'round', x:['mane','muzzle']},
+M:{c:'#B98A66', ears:'side', x:['monkeyface']},
+N:{c:'#8FCBFF', ears:'none', x:['tuft','wings','beak']},
+O:{c:'#C9A27E', ears:'tufts', x:['owl','beak']},
+P:{c:'#5A6688', ears:'none', x:['penguin','wings','beak']},
+Q:{c:'#FFE27A', ears:'none', x:['tuft','wings','duckbill']},
+R:{c:'#FFFFFF', ears:'long', x:['nose']},
+S:{c:'#FFE3A3', ears:'none', x:['shell','antennae']},
+T:{c:'#A6E39A', ears:'none', x:['tshell']},
+U:{c:'#FFFFFF', ears:'small', x:['horn','umane']},
+V:{c:'#9FE0B5', ears:'none', x:['tongue','snakespots']},
+W:{c:'#7FC4F5', ears:'none', x:['spout','whalebelly']},
+X:{c:'#FFA45C', ears:'fox', x:['foxcheek','nose']},
+Y:{c:'#B98A66', ears:'side', x:['yakhorns','bangs','muzzle']},
+Z:{c:'#FFFFFF', ears:'tri', x:['zmane','stripes','muzzle']}
+};
+function mixC(hex, to, a) {
+  const n = parseInt(hex.slice(1), 16), m = parseInt(to.slice(1), 16);
+  const f = (s) => Math.round(((n >> s) & 255) * (1 - a) + ((m >> s) & 255) * a);
+  return `rgb(${f(16)},${f(8)},${f(0)})`;
+}
+function critter(l) {
+  const d = CR[l], c = d.c, x = new Set(d.x);
+  const ol = c === '#FFFFFF' ? '#C9C2D6' : mixC(c, '#3B2B45', .32);
+  const lt = mixC(c, '#FFFFFF', .55);
+  const S = `stroke="${ol}" stroke-width="4" stroke-linejoin="round"`;
+  const pink = '#FFB3C7', ink = '#3B2B45';
+  let back = '', body = '', head = '', over = '', face = '';
+  // ears
+  const E = d.ears;
+  if (E === 'round') back += `<circle cx="42" cy="50" r="25" fill="${c}" ${S}/><circle cx="158" cy="50" r="25" fill="${c}" ${S}/><circle cx="44" cy="52" r="12" fill="${pink}"/><circle cx="156" cy="52" r="12" fill="${pink}"/>`;
+  if (E === 'tri') back += `<path d="M30 84 L38 14 L88 44Z" fill="${c}" ${S}/><path d="M170 84 L162 14 L112 44Z" fill="${c}" ${S}/><path d="M42 66 L46 32 L72 48Z" fill="${pink}"/><path d="M158 66 L154 32 L128 48Z" fill="${pink}"/>`;
+  if (E === 'fox') back += `<path d="M28 88 L26 4 L90 42Z" fill="${c}" ${S}/><path d="M172 88 L174 4 L110 42Z" fill="${c}" ${S}/><path d="M40 68 L40 26 L72 46Z" fill="#FFF4EA"/><path d="M160 68 L160 26 L128 46Z" fill="#FFF4EA"/>`;
+  if (E === 'long') back += `<g transform="rotate(-12 74 40)"><ellipse cx="74" cy="6" rx="19" ry="50" fill="${c}" ${S}/><ellipse cx="74" cy="10" rx="9" ry="36" fill="${pink}"/></g><g transform="rotate(12 126 40)"><ellipse cx="126" cy="6" rx="19" ry="50" fill="${c}" ${S}/><ellipse cx="126" cy="10" rx="9" ry="36" fill="${pink}"/></g>`;
+  if (E === 'elephant') back += `<ellipse cx="24" cy="104" rx="38" ry="48" fill="${c}" ${S}/><ellipse cx="176" cy="104" rx="38" ry="48" fill="${c}" ${S}/><ellipse cx="26" cy="106" rx="22" ry="30" fill="${pink}"/><ellipse cx="174" cy="106" rx="22" ry="30" fill="${pink}"/>`;
+  if (E === 'small') back += `<ellipse cx="42" cy="50" rx="18" ry="11" transform="rotate(-35 42 50)" fill="${c}" ${S}/><ellipse cx="158" cy="50" rx="18" ry="11" transform="rotate(35 158 50)" fill="${c}" ${S}/>`;
+  if (E === 'tiny') back += `<circle cx="54" cy="44" r="12" fill="${c}" ${S}/><circle cx="146" cy="44" r="12" fill="${c}" ${S}/>`;
+  if (E === 'koala') back += `<circle cx="30" cy="62" r="34" fill="${c}" ${S}/><circle cx="170" cy="62" r="34" fill="${c}" ${S}/><circle cx="32" cy="64" r="19" fill="#F3F0F7"/><circle cx="168" cy="64" r="19" fill="#F3F0F7"/>`;
+  if (E === 'side') back += `<circle cx="24" cy="114" r="24" fill="${c}" ${S}/><circle cx="176" cy="114" r="24" fill="${c}" ${S}/><circle cx="26" cy="114" r="12" fill="#FFD9C2"/><circle cx="174" cy="114" r="12" fill="#FFD9C2"/>`;
+  if (E === 'tufts') back += `<path d="M36 64 L26 16 L76 44Z" fill="${c}" ${S}/><path d="M164 64 L174 16 L124 44Z" fill="${c}" ${S}/>`;
+  // back extras
+  if (x.has('mane')) { for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; back += `<circle cx="${100 + Math.cos(a) * 84}" cy="${110 + Math.sin(a) * 76}" r="28" fill="#FFA94D" stroke="#E8873A" stroke-width="4"/>`; } back += `<ellipse cx="100" cy="110" rx="84" ry="76" fill="#FFA94D"/>`; }
+  if (x.has('crest')) back += `<path d="M58 46 L68 14 L82 38 L92 6 L104 34 L116 8 L126 38 L138 16 L144 48Z" fill="#4FB585" ${S.replace(ol, '#3E9A6E')}/>`;
+  if (x.has('ossicones')) back += `<path d="M74 44 L66 8 M126 44 L134 8" stroke="#C98A3A" stroke-width="9" stroke-linecap="round"/><circle cx="66" cy="6" r="10" fill="#C98A3A"/><circle cx="134" cy="6" r="10" fill="#C98A3A"/>`;
+  if (x.has('horn')) back += `<path d="M88 42 L100 -16 L112 42Z" fill="#FFD66B" stroke="#E8B23A" stroke-width="4" stroke-linejoin="round"/><path d="M93 22 L107 16 M90 32 L110 26 M96 8 L104 4" stroke="#E8B23A" stroke-width="3" stroke-linecap="round"/>`;
+  if (x.has('zmane')) back += `<path d="M70 44 L76 8 L88 34 L96 0 L106 32 L116 4 L124 36 L132 14 L134 46Z" fill="#4A4458"/>`;
+  if (x.has('antennae')) back += `<path d="M78 44 L62 0 M122 44 L138 0" stroke="${ol}" stroke-width="5" stroke-linecap="round"/><circle cx="62" cy="-2" r="10" fill="${c}" ${S}/><circle cx="138" cy="-2" r="10" fill="${c}" ${S}/>`;
+  if (x.has('shell')) back += `<circle cx="160" cy="168" r="52" fill="#F7A8C8" stroke="#D97AA3" stroke-width="4"/><path d="M160 168 m-6 0 a6 6 0 1 1 12 0 a14 14 0 1 1 -28 0 a24 24 0 1 1 48 0 a34 34 0 1 1 -68 0" fill="none" stroke="#D97AA3" stroke-width="5" stroke-linecap="round"/>`;
+  if (x.has('tshell')) back += `<ellipse cx="100" cy="190" rx="86" ry="48" fill="#6CC17B" stroke="#4E9C5E" stroke-width="4"/><path d="M100 152 L124 168 L118 196 L82 196 L76 168Z M24 186 L76 168 M176 186 L124 168 M82 196 L64 230 M118 196 L136 230" fill="none" stroke="#4E9C5E" stroke-width="4" stroke-linejoin="round"/>`;
+  if (x.has('spout')) back += `<path d="M100 40 C96 20 92 12 76 6 M100 40 C104 20 108 12 124 6 M100 40 L100 2" stroke="#9ED8FF" stroke-width="8" stroke-linecap="round" fill="none"/><circle cx="74" cy="4" r="8" fill="#9ED8FF"/><circle cx="126" cy="4" r="8" fill="#9ED8FF"/><circle cx="100" cy="-4" r="9" fill="#9ED8FF"/>`;
+  if (x.has('yakhorns')) back += `<path d="M40 74 C10 66 4 40 18 22 C20 44 34 54 56 56Z" fill="#FFF1D6" stroke="#D9C4A0" stroke-width="4" stroke-linejoin="round"/><path d="M160 74 C190 66 196 40 182 22 C180 44 166 54 144 56Z" fill="#FFF1D6" stroke="#D9C4A0" stroke-width="4" stroke-linejoin="round"/>`;
+  if (x.has('wings')) back += `<ellipse cx="54" cy="192" rx="16" ry="26" transform="rotate(30 54 192)" fill="${mixC(c, '#3B2B45', .12)}" ${S}/><ellipse cx="146" cy="192" rx="16" ry="26" transform="rotate(-30 146 192)" fill="${mixC(c, '#3B2B45', .12)}" ${S}/>`;
+  // body
+  if (!x.has('tshell')) {
+    const bc = x.has('penguin') ? '#FFFFFF' : c;
+    body += `<ellipse cx="100" cy="194" rx="46" ry="34" fill="${c}" ${S}/>`;
+    body += `<ellipse cx="100" cy="200" rx="28" ry="22" fill="${x.has('penguin') ? '#FFFFFF' : lt}" opacity=".9"/>`;
+    const fc = (x.has('beak') || x.has('duckbill')) ? '#FFB347' : c;
+    body += `<ellipse cx="78" cy="224" rx="16" ry="10" fill="${fc}" ${S}/><ellipse cx="122" cy="224" rx="16" ry="10" fill="${fc}" ${S}/>`;
+  } else {
+    body += `<ellipse cx="66" cy="226" rx="15" ry="10" fill="${c}" ${S}/><ellipse cx="134" cy="226" rx="15" ry="10" fill="${c}" ${S}/>`;
+  }
+  // head
+  let eyeY = 112, eyeX = 30;
+  if (x.has('frogeyes')) {
+    head += `<circle cx="66" cy="54" r="27" fill="${c}" ${S}/><circle cx="134" cy="54" r="27" fill="${c}" ${S}/>`;
+    eyeY = 56; eyeX = 34;
+  }
+  head += `<ellipse cx="100" cy="112" rx="80" ry="70" fill="${c}" ${S}/>`;
+  if (x.has('frogeyes')) head += `<ellipse cx="66" cy="66" rx="22" ry="12" fill="${c}"/><ellipse cx="134" cy="66" rx="22" ry="12" fill="${c}"/>`;
+  head += `<ellipse cx="66" cy="70" rx="22" ry="12" transform="rotate(-25 66 70)" fill="#FFFFFF" opacity=".45"/>`;
+  // overlays
+  if (x.has('spots')) over += [[100, 52, 10], [42, 92, 8], [160, 90, 9], [64, 60, 6], [140, 58, 6]].map(([a, b, r]) => `<circle cx="${a}" cy="${b}" r="${r}" fill="${mixC(c, '#C9741F', .45)}"/>`).join('');
+  if (x.has('snakespots')) over += [[100, 54, 9], [48, 96, 7], [154, 94, 7]].map(([a, b, r]) => `<circle cx="${a}" cy="${b}" r="${r}" fill="#6CC08A"/>`).join('');
+  if (x.has('stripes')) over += `<path d="M100 44 L100 70 M76 50 L84 72 M124 50 L116 72 M26 110 L48 106 M174 110 L152 106 M30 132 L50 126 M170 132 L150 126" stroke="#4A4458" stroke-width="7" stroke-linecap="round"/>`;
+  if (x.has('monkeyface')) over += `<path d="M100 92 C88 72 50 74 50 108 C50 130 62 162 100 162 C138 162 150 130 150 108 C150 74 112 72 100 92Z" fill="#FFE1C7"/>`;
+  if (x.has('owl')) over += `<circle cx="70" cy="112" r="28" fill="#FFF4E3"/><circle cx="130" cy="112" r="28" fill="#FFF4E3"/>`;
+  if (x.has('penguin')) over += `<path d="M100 96 C90 74 42 76 42 114 C42 146 68 172 100 172 C132 172 158 146 158 114 C158 76 110 74 100 96Z" fill="#FFFFFF"/>`;
+  if (x.has('whalebelly')) over += `<path d="M24 128 C40 178 160 178 176 128 C140 150 60 150 24 128Z" fill="#DDF1FF"/>`;
+  if (x.has('foxcheek')) over += `<path d="M22 118 C40 172 160 172 178 118 C150 132 124 130 100 150 C76 130 50 132 22 118Z" fill="#FFF4EA"/>`;
+  if (x.has('bangs')) over += [56, 76, 100, 124, 144].map((a, i) => `<circle cx="${a}" cy="${54 + (i % 2) * 6}" r="18" fill="${mixC(c, '#3B2B45', .18)}"/>`).join('');
+  if (x.has('umane')) over += `<circle cx="58" cy="60" r="20" fill="#FFB3D9"/><circle cx="80" cy="48" r="20" fill="#D4B8FF"/><circle cx="104" cy="50" r="17" fill="#A8D8FF"/><circle cx="46" cy="84" r="15" fill="#FFE08A"/>`;
+  if (x.has('flop')) over += `<ellipse cx="32" cy="104" rx="22" ry="42" transform="rotate(18 32 104)" fill="#C99A6E" ${S}/><ellipse cx="168" cy="104" rx="22" ry="42" transform="rotate(-18 168 104)" fill="#C99A6E" ${S}/>`;
+  // eyes
+  const eye = (ex, ey) => `<ellipse cx="${ex}" cy="${ey}" rx="14" ry="17" fill="${ink}"/><circle cx="${ex - 4}" cy="${ey - 7}" r="6" fill="#fff"/><circle cx="${ex + 5}" cy="${ey + 6}" r="2.8" fill="#fff"/>`;
+  const ex1 = 100 - eyeX - (x.has('frogeyes') ? 0 : 0), ex2 = 100 + eyeX;
+  face += `<g class="eyes">${eye(100 - eyeX, eyeY)}${eye(100 + eyeX, eyeY)}</g>`;
+  // blush
+  face += `<ellipse cx="46" cy="140" rx="14" ry="8" fill="#FF8FAB" opacity=".6"/><ellipse cx="154" cy="140" rx="14" ry="8" fill="#FF8FAB" opacity=".6"/>`;
+  // snout / mouth
+  const smile = (y) => `<path d="M90 ${y} q5 7 10 0 q5 7 10 0" fill="none" stroke="${ink}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  if (x.has('croc')) face += `<ellipse cx="100" cy="146" rx="58" ry="24" fill="${lt}"/><circle cx="88" cy="134" r="3.5" fill="${ink}"/><circle cx="112" cy="134" r="3.5" fill="${ink}"/><path d="M62 150 Q100 172 138 150" fill="none" stroke="${ink}" stroke-width="3.6" stroke-linecap="round"/><path d="M76 156 l5 8 l5 -6 M114 158 l5 6 l5 -8" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>`;
+  else if (x.has('hippo')) face += `<ellipse cx="100" cy="146" rx="50" ry="28" fill="${lt}"/><ellipse cx="86" cy="138" rx="5" ry="7" fill="${ink}" opacity=".7"/><ellipse cx="114" cy="138" rx="5" ry="7" fill="${ink}" opacity=".7"/>` + smile(154);
+  else if (x.has('muzzle')) face += `<ellipse cx="100" cy="140" rx="28" ry="20" fill="${lt}"/><ellipse cx="100" cy="131" rx="9" ry="6.5" fill="${ink}"/>` + smile(140);
+  else if (x.has('bignose')) face += `<ellipse cx="100" cy="134" rx="15" ry="19" fill="#4A4458"/><ellipse cx="96" cy="126" rx="4" ry="6" fill="#fff" opacity=".5"/>` + smile(156);
+  else if (x.has('trunk')) face += `<path d="M100 120 C100 160 94 176 74 172" fill="none" stroke="${ol}" stroke-width="30" stroke-linecap="round"/><path d="M100 120 C100 160 94 176 74 172" fill="none" stroke="${c}" stroke-width="22" stroke-linecap="round"/><path d="M84 154 q4 6 8 0" fill="none" stroke="${ink}" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
+  else if (x.has('beak')) face += `<path d="M88 130 L112 130 L100 146Z" fill="#FFB347" stroke="#E8913A" stroke-width="3" stroke-linejoin="round"/>`;
+  else if (x.has('duckbill')) face += `<ellipse cx="100" cy="140" rx="26" ry="12" fill="#FFB347" stroke="#E8913A" stroke-width="3"/><path d="M80 141 L120 141" stroke="#E8913A" stroke-width="3" stroke-linecap="round"/>`;
+  else if (x.has('wide')) face += `<path d="M70 138 Q100 162 130 138" fill="none" stroke="${ink}" stroke-width="3.6" stroke-linecap="round"/>`;
+  else if (x.has('nose')) face += `<path d="M94 128 L106 128 L100 135Z" fill="#FF8FAB" stroke="#FF8FAB" stroke-width="3" stroke-linejoin="round"/>` + smile(137);
+  else face += smile(136);
+  if (x.has('tongue')) face += `<path d="M100 140 L100 156 M100 156 L94 164 M100 156 L106 164" stroke="#FF6F91" stroke-width="4" stroke-linecap="round"/>` + smile(134);
+  if (x.has('whisk')) face += `<path d="M20 128 L44 132 M22 144 L44 140 M180 128 L156 132 M178 144 L156 140" stroke="${ol}" stroke-width="3" stroke-linecap="round"/>`;
+  return `<svg viewBox="0 -30 200 270" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">${back}${body}${head}${over}${face}</svg>`;
+}
+
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+const vp = $('#vp'), stage = $('#stage'), scene = $('#scene');
+const rand = n => Math.floor(Math.random() * n);
+const pick = a => a[rand(a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function store(k, v) { try { if (v === undefined) { const s = localStorage.getItem(k); return s === null ? null : JSON.parse(s); } localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
+function mk(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; }
+function at(e, x, y) { e.style.left = x + 'px'; e.style.top = y + 'px'; return e; }
+function anim(e, cls) { e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); }
+const capHTML = l => `<span>${l}</span>`;
+
+let S = 1;
+function fit() {
+  const W = vp.clientWidth, H = vp.clientHeight;
+  S = Math.min(W / 1600, H / 1000);
+  stage.style.transform = `translate(${(W - 1600 * S) / 2}px,${(H - 1000 * S) / 2}px) scale(${S})`;
+}
+addEventListener('resize', fit); fit();
+function pt(e) { const r = stage.getBoundingClientRect(); return { x: (e.clientX - r.left) / S, y: (e.clientY - r.top) / S }; }
+
+let epoch = 0;
+function later(fn, ms) { const e = epoch; setTimeout(() => { if (e === epoch) fn(); }, ms); }
+function loop(fn) {
+  const e = epoch; let last = performance.now();
+  const f = t => { if (e !== epoch) return; const dt = Math.min(.05, (t - last) / 1000); last = t; if (fn(dt, t) !== false) requestAnimationFrame(f); };
+  requestAnimationFrame(f);
+}
+scene.addEventListener('animationend', e => { if (e.target.classList) e.target.classList.remove('popin', 'drop'); });
+function clearScene() { epoch++; quiet = false; scene.innerHTML = ''; if (canSpeak) speechSynthesis.cancel(); }
+
+/* ================= audio ================= */
+let actx = null, master = null, noiseBuf = null;
+function ac() {
+  try {
+    if (!actx) {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      master = actx.createGain(); master.gain.value = 1; master.connect(actx.destination);
+      noiseBuf = actx.createBuffer(1, actx.sampleRate * .5, actx.sampleRate);
+      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (actx.state !== 'running') { const r = actx.resume(); if (r && r.catch) r.catch(() => {}); }
+  } catch (e) { actx = null; }
+  return actx;
+}
+function tone(f, start, dur, type = 'sine', vol = .16, f2) {
+  const a = ac(); if (!a) return;
+  const t = a.currentTime + start, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .012); g.gain.exponentialRampToValueAtTime(.0008, t + dur);
+  o.connect(g).connect(master); o.start(t); o.stop(t + dur + .05);
+}
+function noise(start, dur, vol, freq, q = 1) {
+  const a = ac(); if (!a || !noiseBuf) return;
+  const t = a.currentTime + start, s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  s.connect(f).connect(g).connect(master); s.start(t); s.stop(t + dur + .05);
+}
+const sfx = {
+  pop() { noise(0, .09, .5, 1800, .8); tone(500, 0, .12, 'sine', .14, 1100); },
+  ding() { tone(784, 0, .25); tone(1047, .1, .3); tone(1319, .2, .5, 'sine', .13); },
+  boop() { tone(250, 0, .22, 'triangle', .2, 150); },
+  boing() { tone(180, 0, .4, 'sine', .22, 520); },
+  chomp() { [0, .14, .28].forEach(t => { noise(t, .07, .45, 700, 1.5); tone(170, t, .08, 'square', .05); }); },
+  whoosh() { noise(0, .45, .35, 900, .6); },
+  draw(d) { tone(380, 0, d / 1000, 'triangle', .06, 760); },
+  toot() { tone(392, 0, .35, 'square', .06); tone(494, 0, .35, 'square', .05); tone(392, .42, .5, 'square', .06); tone(494, .42, .5, 'square', .05); },
+  fanfare() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .35, 'triangle', .12)); }
+};
+
+/* music */
+let musicOn = store('abc2-music'); if (musicOn === null) musicOn = true;
+let musicTimer = null, musicNext = 0, musicStep = 0, quiet = false;
+const MEL = [523, 659, 784, 659, 587, 698, 880, 698, 659, 784, 1047, 784, 587, 784, 494, 587];
+const BASS = [131, 0, 196, 0, 147, 0, 220, 0, 165, 0, 196, 0, 147, 0, 196, 0];
+function musicTick() {
+  const a = actx; if (!a) return;
+  while (musicNext < a.currentTime + .2) {
+    const i = musicStep % 16, t0 = musicNext - a.currentTime;
+    if (!quiet && MEL[i] && (i % 2 === 0 || Math.random() < .7)) tone(MEL[i], Math.max(0, t0), .26, 'triangle', .028);
+    if (!quiet && BASS[i]) tone(BASS[i], Math.max(0, t0), .4, 'sine', .05);
+    musicNext += .26; musicStep++;
+  }
+}
+function setMusic(on) {
+  musicOn = on; store('abc2-music', on); drawMusicBtn();
+  clearInterval(musicTimer); musicTimer = null;
+  if (on && ac()) { musicNext = actx.currentTime + .1; musicTimer = setInterval(musicTick, 60); }
+}
+function drawMusicBtn() {
+  $('#musicBtn').innerHTML = musicOn
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="17.5" cy="16" r="2.5" fill="currentColor"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" opacity=".5"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="17.5" cy="16" r="2.5" fill="currentColor"/><path d="M3 3l18 18" opacity="1"/></svg>';
+}
+drawMusicBtn();
+$('#musicBtn').addEventListener('click', () => setMusic(!musicOn));
+let unlocked = false;
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+function unlockAudio() {
+  const a = ac();
+  if (a) { try { const b = a.createBuffer(1, 1, 22050), s = a.createBufferSource(); s.buffer = b; s.connect(a.destination); s.start(0); } catch (e) {} }
+  if (unlocked) return;
+  unlocked = true;
+  if (canSpeak) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} }
+  if (musicOn) setMusic(true);
+}
+['pointerdown', 'touchend', 'click'].forEach(t => addEventListener(t, unlockAudio, { capture: true }));
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+/* fullscreen: re-enter on every tap while the parent setting is on */
+let autoFS = store('abc2-fs'); if (autoFS === null) autoFS = true;
+const fsEl = document.documentElement;
+const fsReq = fsEl.requestFullscreen || fsEl.webkitRequestFullscreen;
+const fsOn = () => document.fullscreenElement || document.webkitFullscreenElement;
+let fsFailed = false;
+const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches;
+function goFS() {
+  if (standalone || !fsReq || fsOn()) return;
+  try { const r = fsReq.call(fsEl); if (r && r.catch) r.catch(() => { fsFailed = true; }); } catch (e) { fsFailed = true; }
+}
+function exitFS() { const x = document.exitFullscreen || document.webkitExitFullscreen; if (x && fsOn()) try { x.call(document); } catch (e) {} }
+['click', 'touchend'].forEach(t => addEventListener(t, () => { if (autoFS) goFS(); }, { capture: true }));
+['fullscreenchange', 'webkitfullscreenchange'].forEach(t => document.addEventListener(t, () => setTimeout(fit, 120)));
+
+/* speech: English only, voice chosen by parent */
+const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+let voices = [], voice = null, rate = store('abc2-rate') || .85;
+function loadVoices() {
+  if (!canSpeak) return;
+  const all = speechSynthesis.getVoices();
+  voices = all.filter(v => /^en[-_]US/i.test(v.lang)).concat(all.filter(v => /^en/i.test(v.lang) && !/^en[-_]US/i.test(v.lang)));
+  const want = store('abc2-voice');
+  const us = voices.filter(v => /^en[-_]US/i.test(v.lang));
+  voice = voices.find(v => v.voiceURI === want) || us.find(v => /google/i.test(v.name)) || us[0] || voices[0] || null;
+}
+if (canSpeak) { loadVoices(); speechSynthesis.addEventListener?.('voiceschanged', loadVoices); }
+function speak(parts) {
+  if (!canSpeak) return;
+  try {
+    if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    for (const t of parts) {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = voice ? voice.lang.replace('_', '-') : 'en-US'; if (voice) u.voice = voice;
+      u.rate = rate; u.pitch = 1.12;
+      speechSynthesis.speak(u);
+    }
+  } catch (e) {}
+}
+const say = l => speak([l]);
+const praise = () => speak([pick(PRAISE)]);
+
+
+/* effects */
+function sparks(x, y, n = 14, colors) {
+  if (reduce) return;
+  for (let i = 0; i < n; i++) {
+    const s = mk('i', 'spark'); s.style.background = (colors || PAL.map(p => p[0]))[i % (colors ? colors.length : 6)];
+    at(s, x - 9, y - 9); scene.append(s);
+    const a = Math.random() * Math.PI * 2, v = 80 + Math.random() * 160;
+    s.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(a) * v}px,${Math.sin(a) * v}px) scale(.3)`, opacity: 0 }],
+      { duration: 600 + Math.random() * 300, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => s.remove();
+  }
+}
+function flowers(n = 34) {
+  const F = ['🌸', '🌼', '🌺', '💮', '🌷'];
+  for (let i = 0; i < n; i++) {
+    const f = mk('div', 'flower', pick(F));
+    at(f, 60 + Math.random() * 1420, 140 + Math.random() * 720);
+    f.style.animationDelay = (Math.random() * .6) + 's';
+    f.style.fontSize = (60 + rand(50)) + 'px';
+    scene.append(f);
+  }
+}
+
+/* letter svg */
+function letterSVG(l, size, layers) {
+  const w = mk('div', 'abs');
+  w.style.width = w.style.height = size + 'px'; w.style.zIndex = 5;
+  const ps = STROKES[l];
+  let h = `<svg viewBox="-8 -8 116 116" width="${size}" height="${size}" style="overflow:visible">`;
+  for (const lay of layers) for (const d of ps) h += `<path class="${lay.cls}" d="${d}" fill="none" stroke="${lay.color}" stroke-width="${lay.w}" stroke-linecap="round" stroke-linejoin="round"${lay.dash ? ` stroke-dasharray="${lay.dash}"` : ''}/>`;
+  h += '</svg>';
+  w.innerHTML = h;
+  return w;
+}
+function drawIn(paths, unitMs = 9) {
+  let t = 0;
+  paths.forEach(p => {
+    const len = p.getTotalLength();
+    p.style.strokeDasharray = `${len} ${len}`; p.style.strokeDashoffset = len;
+    const d = Math.max(380, len * unitMs);
+    later(() => { p.getBoundingClientRect(); p.style.transition = `stroke-dashoffset ${d}ms ease-in-out`; p.style.strokeDashoffset = 0; sfx.draw(d); }, t);
+    t += d + 140;
+  });
+  return t;
+}
+
+/* drag */
+function draggable(node, onDrop, onPick) {
+  node.dataset.hx = parseFloat(node.style.left); node.dataset.hy = parseFloat(node.style.top);
+  let id = null, ox = 0, oy = 0;
+  node.addEventListener('pointerdown', e => {
+    if (node.dataset.lock || id !== null) return;
+    e.preventDefault(); ac();
+    id = e.pointerId; node.setPointerCapture(id);
+    const p = pt(e); ox = p.x - parseFloat(node.style.left); oy = p.y - parseFloat(node.style.top);
+    node.style.transition = 'none'; node.classList.add('lifted');
+    onPick && onPick(node);
+  });
+  node.addEventListener('pointermove', e => {
+    if (e.pointerId !== id) return;
+    const p = pt(e); at(node, p.x - ox, p.y - oy);
+  });
+  const up = e => {
+    if (e.pointerId !== id) return;
+    id = null; node.classList.remove('lifted');
+    const cx = parseFloat(node.style.left) + node.offsetWidth / 2, cy = parseFloat(node.style.top) + node.offsetHeight / 2;
+    node.style.transition = 'left .32s cubic-bezier(.3,1.3,.5,1), top .32s cubic-bezier(.3,1.3,.5,1)';
+    if (!onDrop(cx, cy, node)) at(node, +node.dataset.hx, +node.dataset.hy);
+  };
+  node.addEventListener('pointerup', up); node.addEventListener('pointercancel', up);
+}
+
+/* ================= HUD ================= */
+const badge = $('#badge'), dotsEl = $('#dots');
+function hud(mode) {
+  const lesson = mode === 'lesson';
+  ['#homeBtn', '#skipBtn', '#dots', '#badge'].forEach(s => $(s).classList.toggle('hidden', !lesson));
+  ['#bookBtn', '#gearBtn'].forEach(s => $(s).classList.toggle('hidden', lesson));
+}
+function showBadge(on) { badge.classList.toggle('hide', !on); }
+badge.addEventListener('click', () => { if (cur) { say(cur.l); anim(badge, 'hop'); } });
+$('#homeBtn').addEventListener('click', () => showTrain());
+$('#skipBtn').addEventListener('click', () => { if (cur) runStep(cur.step + 1); });
+
+/* ================= train ================= */
+let done = new Set(store('abc2-done') || []);
+const CHICK = `<g><circle cx="60" cy="64" r="42" fill="#FFD43B"/><path d="M55 24q1-15 11-13q-5 6-3 13z" fill="#FFC21A"/>
+  <ellipse cx="45" cy="57" rx="8" ry="9.5" fill="#3B2B45"/><ellipse cx="75" cy="57" rx="8" ry="9.5" fill="#3B2B45"/><circle cx="42.5" cy="53" r="3.4" fill="#fff"/><circle cx="72.5" cy="53" r="3.4" fill="#fff"/><circle cx="48" cy="61" r="1.6" fill="#fff"/><circle cx="78" cy="61" r="1.6" fill="#fff"/>
+  <ellipse cx="35" cy="71" rx="7" ry="4.5" fill="#FF8FB1" opacity=".75"/><ellipse cx="85" cy="71" rx="7" ry="4.5" fill="#FF8FB1" opacity=".75"/>
+  <path d="M53 66h14l-7 10z" fill="#FF8A1F" stroke="#FF8A1F" stroke-width="2" stroke-linejoin="round"/></g>`;
+const ENGINE = `<svg viewBox="0 0 440 460">
+  <rect x="300" y="150" width="54" height="96" rx="12" fill="#7C5AE0"/><rect x="288" y="136" width="78" height="30" rx="14" fill="#6847C9"/>
+  <rect x="160" y="236" width="256" height="146" rx="44" fill="#A78BFA"/><rect x="160" y="300" width="256" height="20" fill="#FBBF24"/>
+  <circle cx="404" cy="300" r="20" fill="#FDE68A"/>
+  <rect x="24" y="150" width="180" height="232" rx="26" fill="#8B5CF6"/><rect x="8" y="124" width="212" height="40" rx="20" fill="#7C5AE0"/>
+  <rect x="52" y="186" width="124" height="104" rx="22" fill="#FFFFFF"/>
+  <g transform="translate(62 186) scale(.86)">${CHICK}</g>
+  <rect x="402" y="350" width="28" height="44" rx="10" fill="#FBBF24"/>
+  <g fill="#FFFFFF" stroke="#F59E0B" stroke-width="14"><circle cx="100" cy="392" r="48"/><circle cx="262" cy="398" r="40"/><circle cx="360" cy="398" r="40"/></g>
+  <g fill="#F59E0B"><circle cx="100" cy="392" r="14"/><circle cx="262" cy="398" r="12"/><circle cx="360" cy="398" r="12"/></g>
+  <rect x="100" y="388" width="262" height="10" rx="5" fill="#F59E0B"/>
+</svg>`;
+const STAR = `<svg viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4L2.8 9.5l6.4-.8z" fill="#FFC21A" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+
+let cur = null;
+function showTrain(focus) {
+  cur = null; clearScene(); hud('train');
+  scene.append(mk('div', 'sky'));
+  [[180, 120, 0], [760, 70, -12], [1300, 150, -24]].forEach(([x, y, d]) => { const c = mk('div', 'cloud'); at(c, x, y); c.style.animationDelay = d + 's'; scene.append(c); });
+  [[-200, 760, 900, 520, 'var(--hill2)'], [500, 800, 1100, 520, 'var(--hill)'], [1200, 740, 800, 520, 'var(--hill2)']].forEach(([x, y, w, h, c]) => {
+    const e = mk('div', 'hill'); at(e, x, y); e.style.width = w + 'px'; e.style.height = h + 'px'; e.style.background = c; scene.append(e);
+  });
+  if (!canSpeak) { const n = mk('div', 'note', '이 화면에서는 소리가 안 나와요. Chrome에서 링크를 열어 주세요.'); scene.append(n); }
+  const sc = mk('div', 'scroller'), tr = mk('div', 'track');
+  tr.append(mk('div', 'rail'));
+  const eng = mk('div', 'engine', ENGINE + '<i class="puff"></i><i class="puff"></i><i class="puff"></i>');
+  eng.addEventListener('click', () => { sfx.toot(); anim(eng, 'toot'); });
+  tr.append(eng);
+  const nextL = L.find(l => !done.has(l)) || 'A';
+  L.forEach((l, i) => {
+    const [c, e] = pal(l);
+    const car = mk('button', 'car' + (done.has(l) ? ' done' : '') + (l === nextL ? ' next' : ''));
+    car.type = 'button'; car.setAttribute('aria-label', l);
+    car.style.setProperty('--c', c); car.style.setProperty('--e', e); car.style.setProperty('--d', (i * -.37) + 's');
+    car.innerHTML = `<div class="ani">${critter(l)}</div><div class="hook"></div><div class="body L">${capHTML(l)}</div><div class="wheel w1"></div><div class="wheel w2"></div><div class="star">${STAR}</div>`;
+    car.addEventListener('click', () => { say(l); later(() => startLesson(l), 450); });
+    tr.append(car);
+  });
+  sc.append(tr); scene.append(sc);
+  const target = focus || nextL;
+  requestAnimationFrame(() => {
+    const car = [...tr.querySelectorAll('.car')][L.indexOf(target)];
+    sc.scrollLeft = Math.max(0, car.offsetLeft - 800 + 170);
+  });
+}
+
+/* ================= lesson ================= */
+const WORD = {A:'alligator',B:'bear',C:'cat',D:'dog',E:'elephant',F:'frog',G:'giraffe',H:'hippo',I:'iguana',J:'jaguar',K:'koala',L:'lion',M:'monkey',N:'nightingale',O:'owl',P:'penguin',Q:'quack',R:'rabbit',S:'snail',T:'turtle',U:'unicorn',V:'viper',W:'whale',X:'fox',Y:'yak',Z:'zebra'};
+const INTRO = l => l === 'X' ? ['X', 'is in fox!'] : l === 'Q' ? ['Q', 'is for quack, quack!'] : [l, `is for ${WORD[l]}!`];
+const CHANT = l => [l, l, WORD[l] + '!'];
+const CUES = {A:['Slide down!','Slide down!','Across!'], B:['Big line down!','Frog jump! Little curve!','Little curve!'], C:['Magic C!'], D:['Big line down!','Frog jump! Big curve!']};
+const CONF = {A:['H','V','N','K'],B:['P','R','D','E'],C:['O','G','Q','U'],D:['O','P','B'],E:['F','B','L'],F:['E','P','T'],G:['C','O','Q'],H:['A','N','K'],I:['L','T','J'],J:['I','L','U'],K:['X','R','H'],L:['I','T','E'],M:['N','W','H'],N:['M','H','Z'],O:['C','Q','D'],P:['B','R','F'],Q:['O','G','C'],R:['P','B','K'],S:['Z','C','G'],T:['I','L','F'],U:['V','J','O'],V:['U','W','Y'],W:['M','V','N'],X:['K','Y','Z'],Y:['V','X','T'],Z:['N','S','X']};
+const GAMES = { A: appleGame, B: bubbleGame, C: cookieGame, D: digGame };
+const STEPS = [meet, signature, puzzle, trace, choose, music, find, celebrate];
+
+function startLesson(l) {
+  cur = { l, step: 0 };
+  hud('lesson'); showBadge(false);
+  badge.querySelector('span').textContent = l; badge.style.color = pal(l)[0];
+  dotsEl.innerHTML = STEPS.map(() => '<i></i>').join(''); dotsEl.style.setProperty('--c', pal(l)[0]);
+  runStep(0);
+}
+function runStep(i) {
+  if (!cur) return;
+  if (i >= STEPS.length) { finishLesson(); return; }
+  cur.step = i; clearScene(); paintTheme(cur.l);
+  [...dotsEl.children].forEach((d, k) => { d.className = k < i ? 'done' : k === i ? 'on' : ''; });
+  showBadge(i > 0 && i < STEPS.length - 1);
+  STEPS[i](cur.l, () => later(() => runStep(i + 1), 300));
+}
+function finishLesson() {
+  done.add(cur.l); store('abc2-done', [...done]);
+  const idx = L.indexOf(cur.l);
+  showTrain(L[Math.min(25, idx + 1)]);
+}
+function ground() { if (cur && THEME[cur.l]) return; const g = mk('div', 'abs'); at(g, 0, 905); g.style.cssText += 'width:1600px;height:95px;background:var(--hill)'; scene.append(g); return g; }
+function hearts(x, y, n = 5) {
+  for (let i = 0; i < n; i++) {
+    const h = mk('div', 'flower', '💗'); h.style.fontSize = (40 + rand(30)) + 'px';
+    at(h, x - 30 + (Math.random() - .5) * 160, y - Math.random() * 60); h.style.animationDelay = (i * .08) + 's';
+    scene.append(h); later(() => h.remove(), 2400);
+  }
+}
+
+/* 1. meet the letter */
+function meet(l, next) {
+  const [c] = pal(l);
+  const ani = mk('div', 'abs big-ani drop', critter(l)); at(ani, 1090, 520);
+  scene.append(ani); later(sfx.boing, 350);
+  const w = letterSVG(l, 560, [{ cls: 'ink', color: c, w: 14 }]); at(w, 480, 190); scene.append(w);
+  const inks = [...w.querySelectorAll('.ink')];
+  inks.forEach(p => { const n = p.getTotalLength(); p.style.strokeDasharray = `${n} ${n}`; p.style.strokeDashoffset = n; });
+  later(() => {
+    const t = drawIn(inks);
+    later(() => { speak(['This is', l]); anim(w, 'hop'); }, t + 100);
+    later(() => { speak(INTRO(l)); anim(ani, 'hop'); }, t + 1900);
+    later(() => {
+      w.style.transition = 'transform .7s cubic-bezier(.5,0,.3,1), opacity .7s';
+      w.style.transformOrigin = '0 0';
+      w.style.transform = `translate(${34 - 480 + 12}px,${846 - 190 + 10}px) scale(.19)`;
+      ani.style.transition = 'transform .6s ease-in'; ani.style.transform = 'translateX(700px)';
+      sfx.whoosh();
+    }, t + 4300);
+    later(next, t + 5000);
+  }, 950);
+}
+
+/* 2. the letter's own game */
+function signature(l, next) { (GAMES[l] || stack)(l, next); }
+
+/* A: pick apples for the alligator */
+function appleSVG(l) {
+  return `<svg viewBox="0 0 100 104" width="100%" height="100%"><path d="M50 26 C48 14 52 8 58 2" stroke="#7A5230" stroke-width="5" stroke-linecap="round" fill="none"/><ellipse cx="68" cy="12" rx="14" ry="7" transform="rotate(-25 68 12)" fill="#6CC04A"/><path d="M50 28 C28 14 4 26 6 54 C8 82 28 102 50 94 C72 102 92 82 94 54 C96 26 72 14 50 28Z" fill="#FF5A5F" stroke="#D93A45" stroke-width="3"/><ellipse cx="28" cy="46" rx="8" ry="13" transform="rotate(20 28 46)" fill="#fff" opacity=".4"/><text x="50" y="80" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="46" fill="#fff">${l}</text></svg>`;
+}
+function appleGame(l, next) {
+  ground();
+  const tree = mk('div', 'abs', `<svg viewBox="0 0 700 760" width="700" height="760"><rect x="300" y="420" width="100" height="340" rx="30" fill="#B07A4F"/><path d="M350 540 L280 470 M350 580 L430 500" stroke="#B07A4F" stroke-width="26" stroke-linecap="round"/><g fill="#7FD07A"><circle cx="350" cy="260" r="200"/><circle cx="170" cy="330" r="140"/><circle cx="530" cy="330" r="140"/><circle cx="250" cy="150" r="120"/><circle cx="460" cy="150" r="120"/></g><g fill="#A3E596" opacity=".7"><circle cx="260" cy="160" r="60"/><circle cx="150" cy="300" r="46"/></g></svg>`);
+  at(tree, 120, 190); tree.style.transformOrigin = '350px 760px'; scene.append(tree);
+  const ani = mk('div', 'abs big-ani drop', critter(l)); at(ani, 1260, 500); scene.append(ani);
+  const basketBack = mk('div', 'abs', '<svg viewBox="0 0 300 60" width="300" height="60"><ellipse cx="150" cy="30" rx="146" ry="22" fill="#B87A3A"/></svg>'); at(basketBack, 930, 726); scene.append(basketBack);
+  const basket = mk('div', 'abs', `<svg viewBox="0 0 300 180" width="300" height="180"><path d="M10 40 L290 40 L262 172 L38 172Z" fill="#E0A458" stroke="#B87A3A" stroke-width="5" stroke-linejoin="round"/><path d="M28 84 L272 84 M36 128 L264 128" stroke="#B87A3A" stroke-width="4"/><path d="M84 40 L94 172 M150 40 L150 172 M216 40 L206 172" stroke="#B87A3A" stroke-width="4"/><rect x="0" y="28" width="300" height="24" rx="12" fill="#C98A4A"/></svg>`);
+  at(basket, 930, 720); basket.style.zIndex = 6; scene.append(basket);
+  const spots = [[250, 300], [420, 230], [590, 300], [320, 450], [510, 440], [680, 410]];
+  let got = 0; const inBasket = [];
+  spots.forEach(([x, y], k) => {
+    const a = mk('div', 'abs apple popin', appleSVG(l)); a.style.animationDelay = (.3 + k * .1) + 's';
+    at(a, x, y); scene.append(a);
+    a.addEventListener('pointerdown', e => {
+      e.preventDefault(); if (a.dataset.lock) return; a.dataset.lock = '1'; a.style.pointerEvents = 'none'; ac();
+      tree.animate([{ transform: 'rotate(0)' }, { transform: 'rotate(1.4deg)' }, { transform: 'rotate(-1.4deg)' }, { transform: 'rotate(0)' }], { duration: 380 });
+      const tx = 955 + (got % 3) * 82, ty = 640 - Math.floor(got / 3) * 52;
+      a.style.zIndex = 5;
+      a.style.transition = 'left .75s cubic-bezier(.3,0,.6,1), top .75s cubic-bezier(.55,0,1,.45)';
+      at(a, tx, ty); got++; inBasket.push(a);
+      sfx.whoosh(); speak([l, 'apple!']);
+      later(() => { anim(a, 'hop'); sfx.pop(); sparks(tx + 60, ty + 60, 8); }, 760);
+      if (got === spots.length) {
+        later(() => { speak(['Yummy!', 'Apples for the alligator!']); anim(ani, 'hop'); }, 1300);
+        inBasket.forEach((b, k) => later(() => {
+          b.style.zIndex = 7; b.style.transition = 'left .45s ease-in, top .45s ease-in, transform .45s, opacity .45s';
+          at(b, 1350, 700); b.style.transform = 'scale(.3)'; b.style.opacity = 0;
+          sfx.chomp(); anim(ani, 'squish');
+        }, 2600 + k * 420));
+        later(() => { hearts(1410, 560); sfx.fanfare(); }, 2600 + spots.length * 420 + 200);
+        later(next, 2600 + spots.length * 420 + 1800);
+      }
+    });
+  });
+  later(() => speak(['Pick the apples!']), 700);
+}
+
+/* B: pop the bear's bubbles */
+function bubbleGame(l, next) {
+  ground();
+  const ani = mk('div', 'abs big-ani drop', critter(l)); at(ani, 80, 500); scene.append(ani);
+  const conf = CONF[l] || shuffle(L.filter(x => x !== l)).slice(0, 4);
+  const GOAL = 8; let popped = 0, spawned = 0, over = false; const live = [];
+  function spawn() {
+    if (over) return;
+    const isT = spawned < 2 || Math.random() < .72, ch = isT ? l : pick(conf);
+    const b = mk('div', 'bubble L', capHTML(ch)); b.style.color = PAL[rand(6)][0];
+    const s = { b, ch, x0: 300 + Math.random() * 40, y: 640, vx: 70 + Math.random() * 130, sp: 70 + Math.random() * 60, ph: Math.random() * 6, t: 0, alive: true };
+    b.style.transform = `translate(${s.x0}px,${s.y}px) scale(.2)`;
+    scene.append(b); live.push(s); spawned++;
+    tone(520, 0, .18, 'sine', .07, 900); anim(ani, 'squish');
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault(); if (!s.alive || over) return; ac();
+      if (ch === l) {
+        s.alive = false; popped++;
+        b.animate([{ opacity: 1, transform: b.style.transform }, { opacity: 0, transform: b.style.transform + ' scale(1.5)' }], { duration: 180, fill: 'forwards' }).onfinish = () => b.remove();
+        sfx.pop(); sparks(s.x + 85, s.y + 85, 12);
+        speak(popped % 2 ? [l] : ['Bubble!']);
+        if (popped >= GOAL) {
+          over = true;
+          later(() => { speak(['Yay!', 'The bear loves bubbles!']); anim(ani, 'hop'); sfx.fanfare(); hearts(230, 560); }, 600);
+          later(next, 3600);
+        }
+      } else { s.vx += 160; anim(b.firstChild, 'wiggle'); sfx.boop(); }
+    });
+    later(spawn, 900);
+  }
+  later(spawn, 1100);
+  loop(dt => {
+    for (const s of live) {
+      if (!s.alive) continue;
+      s.t += dt;
+      const grow = Math.min(1, .2 + s.t * 2);
+      const x = s.x0 + s.vx * s.t + Math.sin(s.t * 2 + s.ph) * 34;
+      s.y -= s.sp * dt * (over ? 4 : 1);
+      s.x = x;
+      s.b.style.transform = `translate(${x}px,${s.y}px) scale(${grow})`;
+      if (s.y < -220 || x > 1640) { s.alive = false; s.b.remove(); }
+    }
+  });
+  later(() => speak(['Pop the bubbles!']), 600);
+}
+
+/* C: feed cookies to the cat */
+function cookieSVG(l) {
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%"><circle cx="50" cy="50" r="45" fill="#E8B26A" stroke="#C48A45" stroke-width="4"/><g fill="#6B4226"><circle cx="26" cy="32" r="5"/><circle cx="72" cy="28" r="4.5"/><circle cx="78" cy="64" r="5"/><circle cx="24" cy="66" r="4"/><circle cx="52" cy="86" r="3.5"/></g><text x="50" y="68" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="48" fill="#A0652E">${l}</text></svg>`;
+}
+function cookieGame(l, next) {
+  ground();
+  const plate = mk('div', 'abs', '<svg viewBox="0 0 620 150" width="620" height="150"><ellipse cx="310" cy="80" rx="306" ry="66" fill="#FFFFFF" stroke="#D9E3F0" stroke-width="6"/><ellipse cx="310" cy="74" rx="240" ry="44" fill="none" stroke="#EEF3FA" stroke-width="6"/></svg>');
+  at(plate, 100, 700); scene.append(plate);
+  const ani = mk('div', 'abs big-ani drop', critter(l)); ani.style.width = '340px'; ani.style.height = '460px';
+  at(ani, 1080, 450); scene.append(ani);
+  const mx = 1080 + 170, my = 450 + 460 * .615;
+  let n = 0; const TOTAL = 4;
+  [150, 290, 430, 570].forEach((x, k) => {
+    const ck = mk('div', 'abs cookie popin', cookieSVG(l)); ck.style.animationDelay = (.3 + k * .12) + 's';
+    at(ck, x, 640 + (k % 2) * 16); scene.append(ck);
+    draggable(ck, (cx, cy, node) => {
+      if (Math.abs(cx - mx) > 240 || Math.abs(cy - (my - 60)) > 300) return false;
+      node.dataset.lock = '1';
+      node.style.transition = 'left .3s ease-in, top .3s ease-in, transform .3s, opacity .3s';
+      at(node, mx - 70, my - 70); node.style.transform = 'scale(.3)'; node.style.opacity = 0;
+      sfx.chomp(); anim(ani, 'squish'); hearts(mx, my - 220, 3); n++;
+      speak(n % 2 ? [l, 'cookie!'] : ['Crunch!']);
+      if (n === TOTAL) {
+        later(() => { speak(['Crunch, crunch!', 'The cat loves cookies!']); anim(ani, 'hop'); sfx.fanfare(); hearts(mx, my - 260, 6); }, 900);
+        later(next, 4000);
+      }
+      return true;
+    }, () => say(l));
+  });
+  later(() => speak(['Feed the cat!']), 700);
+}
+
+/* fallback game for letters not built yet: stack gifts */
+function stack(l, next) {
+  ground();
+  const ani = mk('div', 'abs big-ani drop', critter(l)); at(ani, 650, 500);
+  scene.append(ani);
+  const xs = [420, 720, 1020], colors = shuffle(PAL).slice(0, 3);
+  let n = 0; const placed = [];
+  xs.forEach((x, i) => {
+    const g = mk('div', 'abs gift popin', `<div class="lid"></div><i class="bow l"></i><i class="bow r"></i><div class="bx L">${capHTML(l)}</div>`);
+    g.style.setProperty('--c', colors[i][0]); g.style.setProperty('--e', colors[i][1]); g.style.animationDelay = (.5 + i * .15) + 's';
+    at(g, x, 150); scene.append(g);
+    draggable(g, (cx, cy, node) => {
+      if (Math.abs(cx - 800) > 260 || cy < 300) return false;
+      node.dataset.lock = '1';
+      at(node, 720 + (rand(17) - 8), 486 - n * 118);
+      node.style.zIndex = 2 + n; placed.push(node); n++;
+      say(l); sfx.pop(); anim(ani, 'squish');
+      later(() => sparks(800, 566 - (n - 1) * 118, 12), 250);
+      if (n === 3) {
+        later(() => { praise(); sfx.fanfare(); }, 600);
+        later(() => {
+          [ani, ...placed].forEach(el => { el.style.transition = 'transform 1.8s cubic-bezier(.5,0,.6,1)'; el.style.transform = 'translateX(1100px)'; });
+          ani.animate([{ rotate: '-6deg' }, { rotate: '6deg' }], { duration: 300, iterations: 6, direction: 'alternate' });
+        }, 1500);
+        later(next, 3300);
+      }
+      return true;
+    }, () => say(l));
+  });
+  later(() => speak(['Stack the boxes!']), 700);
+}
+
+/* 3. guided tracing */
+function trace(l, next) {
+  const [c] = pal(l);
+  const SZ = 640, X0 = 480, Y0 = 190;
+  const w = letterSVG(l, SZ, [
+    { cls: 'base', color: '#E4EBF5', w: 16 },
+    { cls: 'guide', color: '#FFFFFF', w: 2.2, dash: '3 4' },
+    { cls: 'fill', color: c, w: 16 }
+  ]);
+  at(w, X0, Y0); scene.append(w);
+  const svg = w.querySelector('svg'); svg.classList.add('trace-svg');
+  const strokes = [...svg.querySelectorAll('.fill')].map(p => {
+    const len = p.getTotalLength(), n = Math.max(2, Math.ceil(len)) + 1, pts = [];
+    for (let i = 0; i < n; i++) { const q = p.getPointAtLength(len * i / (n - 1)); pts.push([q.x, q.y]); }
+    p.style.strokeDasharray = `0 ${len + 1}`; p.style.opacity = 0;
+    return { p, len, pts };
+  });
+  const NS = 'http://www.w3.org/2000/svg';
+  const dot = document.createElementNS(NS, 'g');
+  dot.innerHTML = TRACER[l] ? `<g class="dot"><circle r="9.5" fill="#fff" stroke="${c}" stroke-width="2"/><text font-size="12" text-anchor="middle" dominant-baseline="central" y=".5">${TRACER[l]}</text></g>` : '<g class="dot"><circle r="7.5" fill="#22C55E" stroke="#fff" stroke-width="2.5"/></g>';
+  svg.append(dot);
+  const hand = mk('div', 'hand', '👆'); scene.append(hand);
+  let si = 0, pi = 0, finished = false, lastMove = performance.now(), active = null;
+  const cue = i => { const cs = CUES[l]; if (cs && cs[i]) speak([cs[i]]); };
+  function place() { const s = strokes[si]; const q = s.pts[pi]; dot.setAttribute('transform', `translate(${q[0]} ${q[1]})`); s.p.style.opacity = pi > 0 ? 1 : 0; s.p.style.strokeDasharray = `${s.len * pi / (s.pts.length - 1)} ${s.len + 1}`; }
+  place();
+  const toSvg = e => { const m = svg.getScreenCTM().inverse(); const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m); return [q.x, q.y]; };
+  const toStage = (x, y) => { const q = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM()); return pt({ clientX: q.x, clientY: q.y }); };
+  function advance(e) {
+    if (finished) return;
+    const [x, y] = toSvg(e), s = strokes[si];
+    let best = -1;
+    for (let j = pi; j < Math.min(s.pts.length, pi + 18); j++) {
+      const dx = s.pts[j][0] - x, dy = s.pts[j][1] - y;
+      if (dx * dx + dy * dy < 13 * 13) best = j;
+    }
+    if (best > pi) { pi = best; lastMove = performance.now(); hand.style.opacity = 0; place(); }
+    if (pi >= s.pts.length - 3) {
+      pi = s.pts.length - 1; place();
+      if (si < strokes.length - 1) { si++; pi = 0; sfx.pop(); place(); cue(si); }
+      else complete();
+    }
+  }
+  function complete() {
+    finished = true; dot.remove(); hand.remove();
+    svg.querySelectorAll('.guide').forEach(g => g.remove());
+    strokes.forEach(s => { s.p.style.strokeDasharray = 'none'; s.p.style.opacity = 1; });
+    anim(w, 'hop'); speak([l, 'Beautiful!']); flowers(28); sfx.fanfare();
+    later(next, 3000);
+  }
+  svg.addEventListener('pointerdown', e => { e.preventDefault(); ac(); if (active !== null) return; active = e.pointerId; svg.setPointerCapture(active); advance(e); });
+  svg.addEventListener('pointermove', e => { if (e.pointerId === active) advance(e); });
+  const end = e => { if (e.pointerId === active) active = null; };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+  let hintT = -1;
+  loop((dt, t) => {
+    if (finished) return false;
+    if (hintT < 0 && t - lastMove > 2800 && active === null) hintT = 0;
+    if (hintT >= 0) {
+      hintT += dt;
+      const s = strokes[si], k = Math.min(1, hintT / 1.4), j = Math.round(pi + (s.pts.length - 1 - pi) * k);
+      const q = toStage(s.pts[j][0], s.pts[j][1]);
+      at(hand, q.x - 30, q.y - 8); hand.style.opacity = k < .9 ? 1 : 0;
+      if (hintT > 1.8) { hintT = -1; lastMove = t - 600; }
+    }
+  });
+  later(() => speak(["Let's write", l]), 400);
+  later(() => { if (si === 0 && pi === 0) cue(0); }, 2300);
+}
+
+/* 4. find the letter among look-alikes */
+function find(l, next) {
+  if (CARRIER[l]) return findThemed(l, next, CARRIER[l]);
+  const conf = CONF[l] || [];
+  const others = [...conf, ...shuffle(L.filter(x => x !== l && !conf.includes(x)))].slice(0, 5);
+  const items = shuffle([l, l, l, l, ...others]).map((x, i) => {
+    const e = mk('div', 'float L', capHTML(x)); e.style.color = PAL[i % 6][0];
+    const s = { e, x: 80 + Math.random() * 1300, y: 150 + Math.random() * 640, vx: (Math.random() < .5 ? -1 : 1) * (35 + Math.random() * 45), vy: (Math.random() < .5 ? -1 : 1) * (25 + Math.random() * 35), l: x, alive: true, fly: false };
+    e.style.transform = `translate(${s.x}px,${s.y}px)`;
+    e.style.opacity = 0; e.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: i * 60, fill: 'forwards' });
+    scene.append(e);
+    e.addEventListener('pointerdown', ev => {
+      ev.preventDefault();
+      if (!s.alive || s.fly) return;
+      if (x === l) {
+        s.alive = false; e.classList.add('gone'); say(l); sfx.pop(); sparks(s.x + 75, s.y + 85, 14);
+        later(() => e.remove(), 350);
+        if (!items.some(it => it.l === l && it.alive)) {
+          later(() => { items.forEach(it => { if (it.alive) { it.fly = true; it.vy = -1400; } }); sfx.whoosh(); }, 500);
+          later(() => {
+            const w = letterSVG(l, 520, [{ cls: 'ink', color: pal(l)[0], w: 14 }]); at(w, 540, 220); w.classList.add('popin'); scene.append(w);
+            flowers(); sfx.fanfare(); praise();
+          }, 1100);
+          later(next, 3400);
+        }
+      } else { anim(e.firstChild, 'wiggle'); sfx.boop(); }
+    });
+    return s;
+  });
+  loop(dt => {
+    for (const s of items) {
+      if (!s.alive) continue;
+      s.x += s.vx * dt; s.y += s.vy * dt;
+      if (!s.fly) {
+        if (s.x < 40 || s.x > 1410) { s.vx *= -1; s.x = Math.max(40, Math.min(1410, s.x)); }
+        if (s.y < 140 || s.y > 800) { s.vy *= -1; s.y = Math.max(140, Math.min(800, s.y)); }
+      }
+      s.e.style.transform = `translate(${s.x}px,${s.y}px)`;
+    }
+  });
+  later(() => speak(['Find the letter', l]), 600);
+}
+
+/* shape puzzle: build the letter from its pieces */
+function puzzle(l, next) {
+  const [c] = pal(l);
+  const SZ = 480, X0 = 190, Y0 = 250, k = SZ / 116, NS = 'http://www.w3.org/2000/svg';
+  const outline = letterSVG(l, SZ, [{ cls: 'shadow', color: '#DCE5F1', w: 20 }, { cls: 'guide', color: '#FFFFFF', w: 2.2, dash: '3 4' }]);
+  at(outline, X0, Y0); outline.style.zIndex = 1; scene.append(outline);
+  const tmp = document.createElementNS(NS, 'svg');
+  tmp.setAttribute('viewBox', '-8 -8 116 116'); tmp.style.cssText = 'position:absolute;width:10px;height:10px;visibility:hidden';
+  document.body.append(tmp);
+  let ds = STROKES[l].slice();
+  if (ds.length === 1) {
+    const p = document.createElementNS(NS, 'path'); p.setAttribute('d', ds[0]); tmp.append(p);
+    const len = p.getTotalLength(), n = 60, pts = [];
+    for (let i = 0; i <= n; i++) { const q = p.getPointAtLength(len * i / n); pts.push(`${q.x.toFixed(2)} ${q.y.toFixed(2)}`); }
+    ds = ['M' + pts.slice(0, n / 2 + 1).join(' L'), 'M' + pts.slice(n / 2).join(' L')];
+    p.remove();
+  }
+  const pieces = ds.map(d => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); tmp.append(p); const b = p.getBBox(); p.remove(); return { d, b }; });
+  tmp.remove();
+  let round = 0;
+  function play() {
+    scene.querySelectorAll('.ppiece,.pfull').forEach(e => e.remove());
+    const n = pieces.length, cols = shuffle(PAL), order = shuffle(pieces.map((_, i) => i)), pad = 10;
+    let placed = 0;
+    pieces.forEach((pc, i) => {
+      const b = pc.b, vw = b.width + pad * 2, vh = b.height + pad * 2, pw = vw * k, ph = vh * k;
+      const el = mk('div', 'abs ppiece popin', `<svg viewBox="${b.x - pad} ${b.y - pad} ${vw} ${vh}" width="100%" height="100%"><path d="${pc.d}" fill="none" stroke="${cols[i][0]}" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+      el.style.width = pw + 'px'; el.style.height = ph + 'px';
+      const tx = X0 + (b.x - pad + 8) * k, ty = Y0 + (b.y - pad + 8) * k;
+      el.dataset.tx = tx; el.dataset.ty = ty;
+      const slot = order.indexOf(i);
+      const cx = 790 + (slot + .5) * 760 / n, cy = 560 + (slot % 2 ? 120 : -100) * (n > 2 ? 1 : .4);
+      at(el, Math.max(700, Math.min(1580 - pw, cx - pw / 2)), Math.max(150, Math.min(980 - ph, cy - ph / 2)));
+      el.style.animationDelay = (.2 + slot * .12) + 's';
+      scene.append(el);
+      draggable(el, (mx, my, node) => {
+        if (Math.hypot(parseFloat(node.style.left) - tx, parseFloat(node.style.top) - ty) > 130) return false;
+        node.dataset.lock = '1'; node.style.zIndex = 2; at(node, tx, ty);
+        sfx.pop(); later(() => sparks(tx + pw / 2, ty + ph / 2, 10), 250);
+        placed++;
+        if (placed === n) {
+          later(() => {
+            const full = letterSVG(l, SZ, [{ cls: 'ink', color: c, w: 16 }]); at(full, X0, Y0);
+            full.classList.add('pfull'); full.style.zIndex = 3; scene.append(full); anim(full, 'hop');
+            speak([l, round === 0 ? 'Great job!' : 'You did it!']); sfx.fanfare();
+          }, 400);
+          round++;
+          later(() => { if (round < 2) play(); else { flowers(20); later(next, 2200); } }, 3000);
+        }
+        return true;
+      }, () => tone(620, 0, .08, 'sine', .08));
+    });
+    later(() => speak(round === 0 ? ['Build the letter', l] : ['One more time!']), 500);
+  }
+  play();
+}
+
+/* music: tap the letter bars on the xylophone */
+function bell(f) { tone(f, 0, 1.1, 'sine', .2); tone(f * 2, 0, .5, 'sine', .05); tone(f * 3, 0, .2, 'triangle', .02); }
+function music(l, next) {
+  if (NOTE_SKIN[l]) return musicThemed(l, next, NOTE_SKIN[l]);
+  quiet = true;
+  const NOTES = [523, 587, 659, 784, 880, 1047], cols = ['#FB7185', '#FBBF24', '#84CC16', '#38BDF8', '#A78BFA', '#F472B6'];
+  [420, 610].forEach(y => { const r = mk('div', 'abs rail2'); at(r, 160, y); scene.append(r); });
+  const ani = mk('div', 'abs big-ani popin', critter(l)); ani.style.width = '170px'; ani.style.height = '230px'; at(ani, 1420, 720); scene.append(ani);
+  let round = 0;
+  function setup() {
+    scene.querySelectorAll('.xbar').forEach(b => b.remove());
+    const conf = CONF[l] || [];
+    const others = [...conf, ...shuffle(L.filter(x => x !== l && !conf.includes(x)))].slice(0, 3);
+    const labels = shuffle([l, l, l, ...others]);
+    let lit = 0, busy = false;
+    const bars = labels.map((x, i) => {
+      const h = 460 - i * 34, b = mk('button', 'abs xbar L popin', capHTML(x));
+      b.type = 'button'; b.setAttribute('aria-label', x); b.style.animationDelay = (i * .08) + 's';
+      b.style.height = h + 'px'; b.style.setProperty('--c', cols[i]); b.style.setProperty('--e', mixC(cols[i], '#3B2B45', .28));
+      at(b, 190 + i * 210, 520 - h / 2); scene.append(b);
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault(); ac(); bell(NOTES[i]); anim(b, 'ring');
+        if (busy) return;
+        if (x === l && !b.classList.contains('lit')) {
+          b.classList.add('lit'); lit++; say(l); sparks(275 + i * 210, 520 - h / 2, 10);
+          if (lit === 3) { busy = true; later(() => playTune(bars), 1000); }
+        }
+      });
+      return b;
+    });
+    later(() => speak(round === 0 ? ['Tap every', l] : ['Again!', 'Tap every', l]), 600);
+  }
+  function playTune(bars) {
+    speak(['Listen!']); anim(ani, 'hop');
+    const seq = [0, 2, 4, 5, 4, 2, 3, 1, 0];
+    seq.forEach((i, k) => later(() => { bell(NOTES[i]); anim(bars[i], 'ring'); }, 900 + k * 280));
+    later(() => {
+      round++;
+      if (round < 2) setup();
+      else { speak(['Wow!', 'What a song!']); anim(ani, 'hop'); flowers(20); later(next, 2800); }
+    }, 900 + seq.length * 280 + 700);
+  }
+  setup();
+}
+
+/* ================= letter themes (A–D) ================= */
+const THEME = {
+  A: { sky: ['#E3F4FF', '#F3FFEC'], ground: '#C9EDB0', deco: [['☁️', 330, 120, 100], ['☁️', 1040, 150, 80], ['🐝', 1180, 210, 56], ['🌼', 380, 915, 56], ['🌼', 860, 925, 48], ['🌼', 1300, 915, 56]] },
+  B: { sky: ['#DCEFFF', '#F6FBFF'], ground: '#D4F0C2', deco: [['☁️', 360, 110, 110], ['☁️', 1000, 140, 90], ['🦋', 1200, 220, 56], ['🌷', 420, 915, 56], ['🌷', 960, 925, 48], ['🌷', 1320, 915, 56]] },
+  C: { sky: ['#FFF1E0', '#FFF8EF'], ground: '#F2D3AE', floor: '#FBE6CC', deco: [['🕰️', 360, 130, 80], ['🧁', 1060, 150, 64], ['🥛', 1140, 150, 64], ['🍯', 1220, 150, 64]], shelf: [1030, 214, 290] },
+  D: { sky: ['#E6F5FF', '#F7FCFF'], ground: '#D8BE95', grass: '#B8E39A', deco: [['☁️', 350, 110, 100], ['☁️', 1050, 150, 84], ['🌻', 420, 900, 64], ['🦴', 900, 930, 44], ['🌻', 1300, 900, 64]] }
+};
+const TRACER = { A: '🍎', B: '🫧', C: '🍪', D: '🐾' };
+const NOTE_SKIN = { A: 'apple', B: 'bubble', C: 'cookie', D: 'drum' };
+const CARRIER = { A: 'plane', B: 'balloon', C: 'car', D: 'duck' };
+function paintTheme(l) {
+  const t = THEME[l]; if (!t) return;
+  const bg = mk('div', 'abs themebg'); bg.style.cssText += `left:0;top:0;width:1600px;height:1000px;background:linear-gradient(${t.sky[0]}, ${t.sky[1]} 75%)`;
+  scene.append(bg);
+  const g = mk('div', 'abs themebg'); at(g, 0, 905);
+  g.style.cssText += `width:1600px;height:95px;background:${t.floor ? `repeating-conic-gradient(${t.ground} 0 25%, ${t.floor} 0 50%) 0 0/64px 64px` : t.ground}`;
+  if (t.grass) g.style.borderTop = `16px solid ${t.grass}`;
+  scene.append(g);
+  if (t.shelf) { const s = mk('div', 'abs themebg'); at(s, t.shelf[0], t.shelf[1]); s.style.cssText += `width:${t.shelf[2]}px;height:16px;border-radius:8px;background:#D9B48A`; scene.append(s); }
+  t.deco.forEach(([e, x, y, size]) => { const d = mk('div', 'abs deco', e); at(d, x, y); d.style.fontSize = size + 'px'; scene.append(d); });
+}
+
+/* D: help the dog dig for bones */
+function boneSVG(l) {
+  return `<svg viewBox="0 0 200 90" width="100%" height="100%"><g fill="#FFF8EC" stroke="#D9C4A0" stroke-width="4"><circle cx="30" cy="26" r="20"/><circle cx="30" cy="64" r="20"/><circle cx="170" cy="26" r="20"/><circle cx="170" cy="64" r="20"/></g><rect x="26" y="22" width="148" height="46" rx="8" fill="#FFF8EC"/><path d="M44 22 H156 M44 68 H156" stroke="#D9C4A0" stroke-width="4"/><text x="100" y="62" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="46" fill="#C98A3A">${l}</text></svg>`;
+}
+const MOUND = '<svg viewBox="0 0 280 160" width="100%" height="100%"><path d="M0 160 C10 70 70 30 140 28 C210 30 270 70 280 160Z" fill="#A9763F"/><g fill="#8A5A2B"><circle cx="80" cy="100" r="9"/><circle cx="170" cy="70" r="7"/><circle cx="210" cy="120" r="10"/><circle cx="120" cy="135" r="6"/></g><path d="M120 34 l-6 -18 M140 30 l0 -20 M160 34 l6 -18" stroke="#7CC46A" stroke-width="6" stroke-linecap="round"/></svg>';
+function dirt(x, y) {
+  if (reduce) return;
+  for (let i = 0; i < 3; i++) {
+    const s = mk('i', 'spark'); s.style.background = i % 2 ? '#A9763F' : '#8A5A2B'; at(s, x - 9, y - 9); scene.append(s);
+    const dx = (Math.random() - .5) * 220, dy = -80 - Math.random() * 120;
+    s.animate([{ transform: 'translate(0,0)', opacity: 1 }, { transform: `translate(${dx * .6}px,${dy}px)`, opacity: 1, offset: .5 }, { transform: `translate(${dx}px,${dy + 160}px)`, opacity: 0 }], { duration: 650, easing: 'ease-out' }).onfinish = () => s.remove();
+  }
+}
+function digGame(l, next) {
+  const ani = mk('div', 'abs big-ani drop', critter(l)); at(ani, 40, 500); scene.append(ani);
+  const mouth = [190, 749];
+  const hand = mk('div', 'hand', '👆'); scene.append(hand);
+  let found = 0, lastAct = performance.now();
+  const spots = [520, 860, 1200].map(x => ({ x, done: false }));
+  spots.forEach((sp, k) => {
+    const x = sp.x;
+    const bone = mk('div', 'abs bone', boneSVG(l)); bone.style.width = '200px'; bone.style.height = '90px'; at(bone, x + 40, 795); scene.append(bone);
+    const m = mk('div', 'abs mound popin', MOUND); m.style.width = '280px'; m.style.height = '160px'; m.style.animationDelay = (k * .12) + 's';
+    at(m, x, 745); scene.append(m);
+    let dist = 0, acc = 0, id = null, lx = 0, ly = 0;
+    m.addEventListener('pointerdown', e => { e.preventDefault(); ac(); if (sp.done) return; id = e.pointerId; m.setPointerCapture(id); const p = pt(e); lx = p.x; ly = p.y; lastAct = performance.now(); });
+    m.addEventListener('pointermove', e => {
+      if (e.pointerId !== id || sp.done) return;
+      const p = pt(e), d = Math.hypot(p.x - lx, p.y - ly); lx = p.x; ly = p.y; dist += d; acc += d;
+      lastAct = performance.now(); hand.style.opacity = 0;
+      if (acc > 45) { acc = 0; dirt(p.x, p.y); noise(0, .06, .2, 500, .7); }
+      const pr = Math.min(1, dist / 850);
+      m.style.transform = `scaleY(${1 - pr * .9})`;
+      if (pr >= 1) reveal();
+    });
+    const up = e => { if (e.pointerId === id) id = null; };
+    m.addEventListener('pointerup', up); m.addEventListener('pointercancel', up);
+    function reveal() {
+      sp.done = true; m.style.transition = 'opacity .4s'; m.style.opacity = 0;
+      bone.style.zIndex = 5; anim(bone, 'hop'); sfx.ding(); sparks(x + 140, 830, 14); speak([l, 'Dig, dig!']);
+      found++;
+      later(() => {
+        bone.style.transition = 'left .6s ease-in, top .6s ease-in, transform .6s, opacity .6s';
+        at(bone, mouth[0] - 100, mouth[1] - 45); bone.style.transform = 'scale(.3)'; bone.style.opacity = 0;
+        later(() => { anim(ani, 'hop'); sfx.chomp(); hearts(mouth[0], 560, 3); }, 600);
+      }, 1400);
+      if (found === spots.length) {
+        later(() => { speak(['Yay!', 'The dog found the bones!']); sfx.fanfare(); anim(ani, 'hop'); }, 2400);
+        later(next, 5200);
+      }
+    }
+  });
+  loop((dt, t) => {
+    const r = spots.find(s => !s.done);
+    if (!r) { hand.style.opacity = 0; return false; }
+    if (performance.now() - lastAct > 3000) { hand.style.opacity = 1; at(hand, r.x + 100 + Math.sin(t / 180) * 70, 790); }
+  });
+  later(() => speak(['Help the dog dig!', 'Rub the dirt!']), 800);
+}
+
+/* themed music: tap the letter objects */
+function drumSVG(l, [c, e]) {
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%"><ellipse cx="50" cy="80" rx="44" ry="14" fill="${e}"/><rect x="6" y="30" width="88" height="50" fill="${c}"/><path d="M6 34 L28 76 L50 34 L72 76 L94 34" fill="none" stroke="#fff" stroke-width="3" opacity=".7"/><ellipse cx="50" cy="30" rx="44" ry="14" fill="#FFF6E8" stroke="${e}" stroke-width="3"/><text x="50" y="70" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="34" fill="#fff">${l}</text></svg>`;
+}
+function drum(f) { tone(f / 3, 0, .45, 'sine', .35, f / 6); noise(0, .12, .25, 1200, .8); }
+function musicThemed(l, next, kind) {
+  quiet = true;
+  const NOTES = [523, 587, 659, 784, 880, 1047];
+  if (kind === 'apple') { const br = mk('div', 'abs branch'); at(br, 150, 236); scene.append(br); }
+  if (kind === 'cookie') { const tr = mk('div', 'abs tray'); at(tr, 150, 668); scene.append(tr); }
+  const ani = mk('div', 'abs big-ani popin', critter(l)); ani.style.width = '170px'; ani.style.height = '230px'; at(ani, 1420, 720); scene.append(ani);
+  const play = i => kind === 'drum' ? drum(NOTES[i]) : bell(NOTES[i]);
+  let round = 0;
+  function setup() {
+    scene.querySelectorAll('.nb,.stem').forEach(b => b.remove());
+    const conf = CONF[l] || [];
+    const others = [...conf, ...shuffle(L.filter(x => x !== l && !conf.includes(x)))].slice(0, 3);
+    const labels = shuffle([l, l, l, ...others]);
+    let lit = 0, busy = false;
+    const objs = labels.map((x, i) => {
+      const s = 214 - i * 12, cx = 280 + i * 210, col = PAL[(i + 2) % 6];
+      let html, top;
+      if (kind === 'apple') { html = appleSVG(x); top = 320 + (i % 2) * 44; const st = mk('div', 'abs stem'); at(st, cx - 3, 250); st.style.height = (top - 250 + 24) + 'px'; scene.append(st); }
+      else if (kind === 'bubble') { html = `<div class="bub bobi L" style="color:${col[0]};--d:${i * -.45}s">${capHTML(x)}</div>`; top = 500 - s / 2 + (i % 2) * 40; }
+      else if (kind === 'cookie') { html = cookieSVG(x); top = 680 - s; }
+      else if (kind.startsWith('emo:')) { html = tagged(kind.slice(4), x); top = 730 - s; }
+      else { html = drumSVG(x, col); top = 800 - s; }
+      const b = mk('button', 'abs nb popin', html); b.type = 'button'; b.setAttribute('aria-label', x);
+      b.style.width = b.style.height = s + 'px'; b.style.fontSize = (s * (kind.startsWith('emo:') ? .78 : .5)) + 'px'; b.style.animationDelay = (i * .08) + 's';
+      at(b, cx - s / 2, top); scene.append(b);
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault(); ac(); play(i); anim(b, kind === 'apple' ? 'swing' : 'ring');
+        if (busy) return;
+        if (x === l && !b.classList.contains('lit')) {
+          b.classList.add('lit'); lit++; say(l); sparks(cx, top + s / 2, 10);
+          if (lit === 3) { busy = true; later(() => tune(objs), 1000); }
+        }
+      });
+      return b;
+    });
+    later(() => speak(round === 0 ? ['Tap every', l] : ['Again!', 'Tap every', l]), 600);
+  }
+  function tune(objs) {
+    speak(['Listen!']); anim(ani, 'hop');
+    const seq = [0, 2, 4, 5, 4, 2, 3, 1, 0];
+    seq.forEach((i, k) => later(() => { play(i); anim(objs[i], kind === 'apple' ? 'swing' : 'ring'); }, 900 + k * 280));
+    later(() => {
+      round++;
+      if (round < 2) setup();
+      else { speak(['Wow!', 'What a song!']); anim(ani, 'hop'); flowers(20); later(next, 2800); }
+    }, 900 + seq.length * 280 + 700);
+  }
+  setup();
+}
+
+/* themed find: letters ride on things that move */
+function balloonSVG(l, c, e) {
+  return `<svg viewBox="0 0 100 154" width="100%" height="100%"><path d="M50 108 C44 124 58 134 50 152" fill="none" stroke="#A9B6CC" stroke-width="2"/><path d="M44 106 L56 106 L50 98Z" fill="${e}"/><ellipse cx="50" cy="52" rx="44" ry="52" fill="${c}"/><ellipse cx="32" cy="30" rx="9" ry="14" fill="#fff" opacity=".35" transform="rotate(-25 32 30)"/><text x="50" y="72" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="58" fill="#fff">${l}</text></svg>`;
+}
+function carrierSVG(kind, x, [col, dk], dir) {
+  const T = (tx, ty, fs, fill) => `<text x="${tx}" y="${ty}" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="${fs}" fill="${fill}">${x}</text>`;
+  const flip = (W, g) => dir < 0 ? `<g transform="translate(${W} 0) scale(-1 1)">${g}</g>` : g;
+  if (kind === 'balloon') return balloonSVG(x, col, dk);
+  if (kind === 'plane') return `<svg viewBox="0 0 250 140" width="100%" height="100%">${flip(250, `<path d="M38 70 L14 22 L62 52Z" fill="${dk}"/><ellipse cx="125" cy="76" rx="102" ry="34" fill="${col}"/><ellipse cx="128" cy="98" rx="52" ry="12" fill="${dk}"/><circle cx="184" cy="64" r="9" fill="#fff"/><circle cx="208" cy="68" r="7" fill="#fff"/><rect x="226" y="50" width="8" height="52" rx="4" fill="#9AA6BD"/>`)}${T(122, 94, 52, '#fff')}</svg>`;
+  if (kind === 'car') return `<svg viewBox="0 0 250 160" width="100%" height="100%">${flip(250, `<path d="M62 64 Q76 20 118 20 L160 20 Q192 20 206 64Z" fill="${col}"/><path d="M86 60 Q94 32 116 32 L128 32 L128 60Z M140 60 L140 32 L158 32 Q178 32 186 60Z" fill="#E6F4FF"/><rect x="10" y="58" width="232" height="62" rx="26" fill="${col}"/><circle cx="234" cy="80" r="8" fill="#FFE27A"/><circle cx="66" cy="124" r="24" fill="#3B3B4F"/><circle cx="66" cy="124" r="9" fill="#C9D1E0"/><circle cx="186" cy="124" r="24" fill="#3B3B4F"/><circle cx="186" cy="124" r="9" fill="#C9D1E0"/>`)}${T(126, 108, 48, '#fff')}</svg>`;
+  return `<svg viewBox="0 0 200 170" width="100%" height="100%">${flip(200, `<path d="M18 92 L4 62 L44 84Z" fill="#FFC21A"/><ellipse cx="92" cy="112" rx="80" ry="48" fill="#FFD43B"/><circle cx="148" cy="60" r="36" fill="#FFD43B"/><ellipse cx="186" cy="66" rx="16" ry="9" fill="#FF8A1F"/><ellipse cx="156" cy="52" rx="6" ry="8" fill="#3B2B45"/><circle cx="154" cy="49" r="2.4" fill="#fff"/><ellipse cx="136" cy="74" rx="8" ry="5" fill="#FF8FAB" opacity=".6"/>`)}${T(90, 130, 56, col)}</svg>`;
+}
+function findThemed(l, next, kind) {
+  const conf = CONF[l] || [];
+  const others = [...conf, ...shuffle(L.filter(x => x !== l && !conf.includes(x)))].slice(0, 5);
+  const labels = shuffle([l, l, l, l, ...others]);
+  const emo = kind.startsWith('emo:') ? kind.split(':') : null;
+  const mo = emo ? emo[2] : kind === 'car' || kind === 'duck' ? 'lane' : kind === 'balloon' ? 'rise' : 'fly';
+  const [W, H] = emo ? [180, 200] : { plane: [250, 140], balloon: [150, 231], car: [250, 160], duck: [200, 170] }[kind];
+  const lanes = kind === 'car' ? [210, 430, 650] : (mo === 'lane' || mo === 'hop') ? [230, 450, 670] : null;
+  const laneSp = kind === 'car' ? [130, 100, 150] : kind === 'duck' ? [55, 42, 65] : [110, 85, 130].map(v => v * (emo && emo[1] === '🐌' ? .35 : 1));
+  if (kind === 'car') lanes.forEach(y => { const r = mk('div', 'abs road'); at(r, 0, y + 140); scene.append(r); });
+  if (kind === 'duck') lanes.forEach(y => { const r = mk('div', 'abs water'); at(r, 0, y + 132); scene.append(r); });
+  const items = labels.map((x, i) => {
+    const s = { l: x, alive: true, fly: false, ph: Math.random() * 6, vx: 0, vy: 0 };
+    if (lanes) { const ln = i % 3; s.y = lanes[ln]; s.vx = (ln % 2 ? -1 : 1) * laneSp[ln]; s.x = Math.floor(i / 3) * 560 + ln * 140 + rand(80); }
+    else if (mo === 'fly') { s.y = 140 + (i % 4) * 175; s.vx = (i % 2 ? -1 : 1) * (80 + rand(60)); s.x = rand(1400); }
+    else if (mo === 'fall') { s.x = 60 + (i * 157) % 1400; s.y = -200 + rand(1100); s.vy = 50 + rand(35); }
+    else if (mo === 'drift') { s.x = 80 + rand(1300); s.y = 150 + rand(600); s.vx = (rand(2) ? -1 : 1) * (35 + rand(40)); s.vy = (rand(2) ? -1 : 1) * (25 + rand(30)); }
+    else { s.x = 60 + (i * 157) % 1400; s.y = 250 + rand(750); s.vy = -(55 + rand(35)); }
+    let e;
+    if (emo) { e = mk('div', 'carrier ti', tagged(emo[1], x)); e.style.fontSize = '150px'; if (s.vx > 0) e.querySelector('.ie').style.transform = 'scaleX(-1)'; }
+    else e = mk('div', 'carrier', carrierSVG(kind, x, PAL[i % 6], s.vx < 0 ? -1 : 1));
+    e.style.width = W + 'px'; e.style.height = H + 'px';
+    s.e = e; s.cx = s.x; scene.append(e);
+    e.addEventListener('pointerdown', ev => {
+      ev.preventDefault();
+      if (!s.alive || s.fly) return;
+      if (x === l) {
+        s.alive = false; say(l); sfx.pop(); sparks(s.cx + W / 2, s.y + H / 2, 14);
+        e.animate([{ transform: e.style.transform, opacity: 1 }, { transform: e.style.transform + ' scale(1.5)', opacity: 0 }], { duration: 300, fill: 'forwards' }).onfinish = () => e.remove();
+        if (!items.some(it => it.l === l && it.alive)) {
+          later(() => { items.forEach(it => { if (it.alive) { it.fly = true; it.vx *= 9; it.vy = mo === 'rise' ? -1400 : mo === 'drift' ? -1200 : it.vy; } }); sfx.whoosh(); }, 500);
+          later(() => {
+            const w = letterSVG(l, 520, [{ cls: 'ink', color: pal(l)[0], w: 14 }]); at(w, 540, 220); w.classList.add('popin'); scene.append(w);
+            flowers(); sfx.fanfare(); praise();
+          }, 1200);
+          later(next, 3600);
+        }
+      } else { anim(e.firstChild, 'wiggle'); sfx.boop(); }
+    });
+    return s;
+  });
+  loop((dt, t) => {
+    for (const s of items) {
+      if (!s.alive) continue;
+      if (mo === 'fall') {
+        s.y += s.vy * dt * (s.fly ? 12 : 1); if (!s.fly && s.y > 1000) s.y = -H;
+        s.cx = s.x + Math.sin(t / 800 + s.ph) * 40;
+        s.e.style.transform = `translate(${s.cx}px,${s.y}px) rotate(${Math.sin(t / 600 + s.ph) * 15}deg)`;
+        continue;
+      }
+      if (mo === 'drift') {
+        s.x += s.vx * dt; s.y += s.vy * dt;
+        if (!s.fly) {
+          if (s.x < 40 || s.x > 1400) { s.vx *= -1; s.x = Math.max(40, Math.min(1400, s.x)); }
+          if (s.y < 140 || s.y > 780) { s.vy *= -1; s.y = Math.max(140, Math.min(780, s.y)); }
+        }
+        s.cx = s.x; s.e.style.transform = `translate(${s.x}px,${s.y}px)`;
+        continue;
+      }
+      if (mo === 'rise') {
+        s.y += s.vy * dt; if (!s.fly && s.y < -H) s.y = 1000;
+        s.cx = s.x + Math.sin(t / 700 + s.ph) * 30;
+        s.e.style.transform = `translate(${s.cx}px,${s.y}px)`;
+        continue;
+      }
+      s.x += s.vx * dt;
+      if (!s.fly) { if (s.x > 1600) s.x = -W; if (s.x < -W) s.x = 1600; }
+      const bob = mo === 'fly' ? Math.sin(t / 500 + s.ph) * 14 : kind === 'duck' ? Math.sin(t / 400 + s.ph) * 5 : mo === 'hop' ? -Math.abs(Math.sin(t / 260 + s.ph)) * 60 : 0;
+      s.cx = s.x; s.e.style.transform = `translate(${s.x}px,${s.y + bob}px)`;
+    }
+  });
+  later(() => speak(['Find the letter', l]), 600);
+}
+
+/* ================= E–Z data ================= */
+Object.assign(THEME, {
+  E: { sky: ['#EAF6FF', '#FFF8E8'], ground: '#E8D7A8', deco: [['☁️', 340, 110, 100], ['🐔', 1250, 830, 70], ['🌾', 420, 900, 60], ['🌾', 980, 905, 54]] },
+  F: { sky: ['#E3F6FF', '#EFFFF4'], ground: '#8FD0C0', deco: [['☁️', 360, 120, 100], ['🪷', 420, 915, 56], ['🌿', 1000, 905, 60], ['🪷', 1300, 915, 56]] },
+  G: { sky: ['#E6F7FF', '#F4FFEC'], ground: '#BFE59F', deco: [['☁️', 380, 120, 100], ['🌼', 500, 915, 50], ['🌼', 1300, 915, 50]] },
+  H: { sky: ['#FFF2E4', '#FFFAF3'], ground: '#E7C9A3', floor: '#F3DCC0', deco: [['🖼️', 380, 130, 80], ['🪞', 1100, 130, 80]] },
+  I: { sky: ['#E3F2FF', '#F8FCFF'], ground: '#F2F8FF', grass: '#DDEBFA', deco: [['❄️', 360, 130, 60], ['❄️', 1050, 170, 50], ['❄️', 700, 110, 44], ['⛄', 30, 740, 130]] },
+  J: { sky: ['#E0F6EA', '#F3FFF6'], ground: '#A9D98E', deco: [['🦜', 1150, 160, 60], ['🌺', 500, 910, 54], ['🌺', 1250, 910, 54]] },
+  K: { sky: ['#DCF0FF', '#F5FBFF'], ground: '#C6EAA6', deco: [['☁️', 360, 110, 110], ['☁️', 1000, 150, 90], ['🌬️', 1200, 220, 64]] },
+  L: { sky: ['#FFF1DA', '#FFF9EE'], ground: '#E5C79B', floor: '#F0D8B4', deco: [['🖼️', 370, 130, 80], ['🪴', 1100, 130, 70]] },
+  M: { sky: ['#E6F6FF', '#F5FFEF'], ground: '#B7DB8C', grass: '#9ACB6E', deco: [['☁️', 360, 110, 100], ['🌾', 460, 905, 56], ['🌾', 1250, 905, 56]] },
+  N: { sky: ['#2B3768', '#56669F'], ground: '#3C5A48', grass: '#4C7259', deco: [['🌙', 1180, 140, 90], ['⭐', 400, 140, 44], ['⭐', 900, 200, 36], ['✨', 650, 110, 40]] },
+  O: { sky: ['#CFEFFF', '#9ED8F5'], ground: '#F1DDB0', deco: [['🫧', 380, 160, 50], ['🐠', 1100, 180, 60], ['🪸', 420, 860, 80], ['🪸', 1300, 860, 80]] },
+  P: { sky: ['#FFEFE6', '#FFF8F3'], ground: '#F2B8B0', floor: '#FFFFFF', deco: [['🫒', 380, 140, 56], ['🧂', 1100, 140, 56]] },
+  Q: { sky: ['#F1E8FF', '#FCF9FF'], ground: '#C9EAC0', deco: [['👑', 420, 130, 60], ['🌸', 600, 915, 50], ['🌸', 1200, 915, 50]] },
+  R: { sky: ['#E1F2FF', '#F6FBFF'], ground: '#C6EBB0', deco: [['🌷', 460, 912, 54], ['🌷', 1250, 912, 54]] },
+  S: { sky: ['#FFF5D1', '#FFFDF2'], ground: '#C9E7A3', deco: [['☀️', 1180, 120, 100], ['🦋', 420, 180, 54], ['🌼', 600, 912, 50]] },
+  T: { sky: ['#FFEFF6', '#FFF8FC'], ground: '#E5D0F0', floor: '#F2E6F8', deco: [['🪁', 380, 130, 70], ['🧩', 1100, 150, 60]] },
+  U: { sky: ['#D3E2F0', '#ECF3FA'], ground: '#B5D6C3', deco: [['🌧️', 360, 110, 100], ['🌧️', 1050, 140, 90]] },
+  V: { sky: ['#E5F5FF', '#F6FFEE'], ground: '#C7A473', grass: '#A6D98B', deco: [['☁️', 360, 110, 100], ['🌽', 420, 880, 70], ['🥕', 1300, 890, 60]] },
+  W: { sky: ['#DDF2FF', '#F2FAFF'], ground: '#F1E0B4', deco: [['🌊', 380, 140, 70], ['☁️', 1050, 120, 100], ['🐚', 600, 915, 50]] },
+  X: { sky: ['#DFF7FF', '#FFF7E3'], ground: '#F2DBA4', deco: [['🦀', 480, 905, 56], ['☁️', 400, 110, 90], ['🌴', 1150, 120, 80]] },
+  Y: { sky: ['#FFF8D6', '#FFFDF1'], ground: '#E2ED9C', deco: [['☀️', 1180, 110, 100], ['🌼', 460, 912, 52], ['🌼', 1260, 912, 52]] },
+  Z: { sky: ['#E8F5FF', '#F7FBFF'], ground: '#D7E7B4', deco: [['🎈', 380, 130, 64], ['🎪', 1080, 120, 80]] }
+});
+Object.assign(TRACER, { E: '🥚', F: '🪷', G: '🍇', H: '🎩', I: '🍦', J: '🧃', K: '🪁', L: '🍋', M: '🐭', N: '⭐', O: '🍊', P: '🍕', Q: '👑', R: '🌈', S: '☀️', T: '🧸', U: '☂️', V: '🥕', W: '💧', X: '❌', Y: '🪀', Z: '⚡' });
+Object.assign(NOTE_SKIN, { E: 'emo:🥚', F: 'emo:🐟', G: 'emo:🍇', H: 'emo:🎩', I: 'emo:🧊', J: 'emo:🧃', K: 'emo:🔑', L: 'emo:🍋', M: 'emo:🥭', N: 'emo:⭐', O: 'emo:🐚', P: 'emo:🍐', Q: 'emo:👑', R: 'emo:🌹', S: 'emo:🍓', T: 'emo:🧸', V: 'emo:🎻', W: 'emo:🍉', Y: 'emo:🪀', Z: 'drum' });
+Object.assign(CARRIER, { E: 'emo:🥚:lane', F: 'emo:🐟:lane', G: 'emo:🍃:fall', H: 'emo:🚁:fly', I: 'emo:❄️:fall', J: 'emo:🦜:fly', K: 'emo:🦘:hop', L: 'emo:🐞:drift', M: 'emo:🏍️:lane', N: 'emo:☁️:fly', O: 'emo:🐙:drift', P: 'emo:🐷:lane', Q: 'emo:❓:drift', R: 'emo:🚀:rise', S: 'emo:🐌:lane', T: 'emo:🚂:lane', U: 'emo:🛸:fly', V: 'emo:🚐:lane', W: 'emo:⛵:lane', X: 'emo:🦀:lane', Y: 'emo:🐥:hop', Z: 'emo:🐝:fly' });
+Object.assign(CUES, {
+  E: ['Big line down!', 'Frog jump! Little line!', 'Little line!', 'Little line!'], F: ['Big line down!', 'Frog jump! Little line!', 'Little line!'],
+  G: ['Magic C!', 'Little line in!'], H: ['Big line down!', 'Big line down!', 'Little line across!'], I: ['Big line down!', 'Top line!', 'Bottom line!'],
+  J: ['Line down and curve!'], K: ['Big line down!', 'Slide in!', 'Slide out!'], L: ['Big line down and across!'], M: ['Up, down, up, down!'],
+  N: ['Up! Slide down! Up!'], O: ['Magic C! Close it up!'], P: ['Big line down!', 'Frog jump! Little curve!'], Q: ['Magic C! Close it up!', 'Little line!'],
+  R: ['Big line down!', 'Frog jump! Little curve!', 'Slide down!'], S: ['Curve and curve!'], T: ['Line across!', 'Big line down!'],
+  U: ['Down, curve, and up!'], V: ['Slide down, slide up!'], W: ['Down, up, down, up!'], X: ['Slide down!', 'Slide down!'],
+  Y: ['Slide down!', 'Slide down and line down!'], Z: ['Across, slide down, across!']
+});
+const tagged = (e, l) => `<span class="ie">${e}</span><span class="it L">${capHTML(l)}</span>`;
+function tObj(e, l, size, cls = '') { const o = mk('div', 'ti ' + cls, tagged(e, l)); o.style.fontSize = size + 'px'; o.style.width = (size * 1.1) + 'px'; o.style.height = (size * 1.15) + 'px'; return o; }
+function sideCritter(l, x = 1390, y = 600, w = 200) { const a = mk('div', 'abs big-ani popin', critter(l)); a.style.width = w + 'px'; a.style.height = (w * 1.35) + 'px'; at(a, x, y); scene.append(a); return a; }
+function finish(cfg, ani, next, delay = 3800) {
+  later(() => { speak(cfg.end); sfx.fanfare(); if (ani) anim(ani, 'hop'); flowers(16); }, 700);
+  later(next, delay);
+}
+
+/* tap items so they drop into a bowl (G) */
+function collectGame(l, next, cfg) {
+  [210, 400].forEach(y => { const v = mk('div', 'abs vine'); at(v, 140, y); scene.append(v); });
+  const ani = mk('div', 'abs big-ani drop', critter(l)); at(ani, 1260, 500); scene.append(ani);
+  const bowl = mk('div', 'abs', '🥣'); bowl.style.cssText += 'font-size:200px;line-height:1;z-index:6'; at(bowl, 930, 700); scene.append(bowl);
+  const spots = [[200, 236], [420, 236], [640, 236], [860, 236], [300, 426], [700, 426]];
+  let got = 0; const inB = [];
+  spots.forEach(([x, y], k) => {
+    const it = tObj(cfg.item, l, 110, 'popin'); it.style.animationDelay = (.3 + k * .1) + 's'; at(it, x, y); scene.append(it);
+    it.addEventListener('pointerdown', e => {
+      e.preventDefault(); if (it.dataset.lock) return; it.dataset.lock = '1'; it.style.pointerEvents = 'none'; ac();
+      const tx = 960 + (got % 3) * 50, ty = 650 - Math.floor(got / 3) * 40; it.style.zIndex = 5;
+      it.style.transition = 'left .75s cubic-bezier(.3,0,.6,1), top .75s cubic-bezier(.55,0,1,.45)'; at(it, tx, ty);
+      got++; inB.push(it); sfx.whoosh(); speak(cfg.each(l));
+      later(() => { anim(it, 'hop'); sfx.pop(); }, 760);
+      if (got === spots.length) {
+        inB.forEach((b, k) => later(() => {
+          b.style.zIndex = 7; b.style.transition = 'left .45s ease-in, top .45s ease-in, transform .45s, opacity .45s';
+          at(b, 1350, 690); b.style.transform = 'scale(.3)'; b.style.opacity = 0; sfx.chomp(); anim(ani, 'squish');
+        }, 1300 + k * 380));
+        later(() => { speak(cfg.end); hearts(1410, 560); sfx.fanfare(); anim(ani, 'hop'); }, 1300 + spots.length * 380 + 200);
+        later(next, 1300 + spots.length * 380 + 2800);
+      }
+    });
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+/* tap the rising things with the letter (J) */
+function popGame(l, next, cfg) {
+  const ani = sideCritter(l, 40, 560, 220);
+  const conf = CONF[l] || [];
+  const GOAL = 8; let popped = 0, spawned = 0, over = false; const live = [];
+  function spawn() {
+    if (over) return;
+    const isT = spawned < 2 || Math.random() < .7, ch = isT ? l : pick(conf);
+    const o = tObj(cfg.item, ch, 130); o.classList.add('abs');
+    const s = { o, ch, x0: 300 + Math.random() * 1100, y: 1000, sp: 85 + Math.random() * 55, ph: Math.random() * 6, t: 0, alive: true };
+    o.style.transform = `translate(${s.x0}px,${s.y}px)`; scene.append(o); live.push(s); spawned++;
+    o.addEventListener('pointerdown', e => {
+      e.preventDefault(); if (!s.alive || over) return; ac();
+      if (ch === l) {
+        s.alive = false; popped++;
+        o.animate([{ opacity: 1, transform: o.style.transform }, { opacity: 0, transform: o.style.transform + ' scale(1.5)' }], { duration: 200, fill: 'forwards' }).onfinish = () => o.remove();
+        sfx.pop(); sparks(s.x + 70, s.y + 70, 12); speak(popped % 2 ? [l] : [cfg.word]);
+        if (popped >= GOAL) { over = true; finish(cfg, ani, next); }
+      } else { anim(o.firstChild, 'wiggle'); sfx.boop(); }
+    });
+    later(spawn, 950);
+  }
+  later(spawn, 900);
+  loop(dt => {
+    for (const s of live) {
+      if (!s.alive) continue;
+      s.t += dt; s.y -= s.sp * dt * (over ? 5 : 1); s.x = s.x0 + Math.sin(s.t * 1.6 + s.ph) * 40;
+      s.o.style.transform = `translate(${s.x}px,${s.y}px)`;
+      if (s.y < -220) { s.alive = false; s.o.remove(); }
+    }
+  });
+  later(() => speak(cfg.start), 600);
+}
+
+/* drag things to a target (H wear, N fill, P place, V load) */
+const PIZZA = '<svg viewBox="0 0 200 200" width="100%" height="100%"><circle cx="100" cy="100" r="96" fill="#E8B26A"/><circle cx="100" cy="100" r="80" fill="#E2463F"/><circle cx="100" cy="100" r="74" fill="#FFE08A"/><g fill="#FFF3C4" opacity=".7"><circle cx="70" cy="80" r="10"/><circle cx="130" cy="120" r="12"/><circle cx="110" cy="60" r="8"/></g></svg>';
+function dragTo(l, next, cfg) {
+  let tx, ty, tr, ani = null, holder = null, prev = null;
+  if (cfg.mode === 'wear') { ani = mk('div', 'abs big-ani drop', critter(l)); ani.style.width = '360px'; ani.style.height = '486px'; at(ani, 900, 400); scene.append(ani); tx = 1080; ty = 520; tr = 230; }
+  if (cfg.mode === 'fill') { holder = mk('div', 'abs', '🪺'); holder.style.cssText += 'font-size:300px;line-height:1;z-index:2'; at(holder, 760, 560); scene.append(holder); tx = 910; ty = 700; tr = 240; ani = sideCritter(l, 1380, 300, 180); }
+  if (cfg.mode === 'place') { holder = mk('div', 'abs', PIZZA); holder.style.cssText += 'width:560px;height:560px;z-index:1'; at(holder, 760, 300); scene.append(holder); tx = 1040; ty = 580; tr = 270; ani = sideCritter(l, 1380, 620, 190); }
+  if (cfg.mode === 'load') { holder = mk('div', 'abs', '<span style="display:inline-block;transform:scaleX(-1)">🚐</span>'); holder.style.cssText += 'font-size:380px;line-height:1;z-index:4'; at(holder, 860, 430); scene.append(holder); tx = 1050; ty = 640; tr = 260; ani = sideCritter(l, 1400, 220, 170); }
+  const spots = [[150, 230], [380, 230], [150, 470], [380, 470], [265, 700]].slice(0, cfg.items.length);
+  let n = 0;
+  cfg.items.forEach((em, k) => {
+    const it = tObj(em, l, 130, 'popin'); it.classList.add('abs'); it.style.touchAction = 'none'; it.style.zIndex = 3; it.style.animationDelay = (.3 + k * .1) + 's';
+    at(it, spots[k][0], spots[k][1]); scene.append(it);
+    draggable(it, (cx, cy, node) => {
+      if (Math.hypot(cx - tx, cy - ty) > tr) return false;
+      node.dataset.lock = '1'; n++;
+      const w = node.offsetWidth, h = node.offsetHeight;
+      if (cfg.mode === 'wear') {
+        if (prev) { const p = prev; p.style.transition = 'top .5s ease-in, opacity .5s'; at(p, parseFloat(p.style.left) + 120, 1000); p.style.opacity = 0; }
+        node.querySelector('.it').style.opacity = 0; at(node, tx - w / 2, ty - h / 2 - 40); node.style.zIndex = 6; prev = node; anim(ani, 'hop');
+      } else if (cfg.mode === 'fill') {
+        at(node, tx - w / 2 + (n - 2.5) * 60, ty - h / 2 - 70); node.style.zIndex = 3; anim(holder, 'squish');
+      } else if (cfg.mode === 'place') {
+        node.style.transform = 'scale(.8)'; node.querySelector('.it').style.opacity = 0; node.style.zIndex = 2;
+      } else {
+        node.style.transition = 'left .35s ease-in, top .35s ease-in, transform .35s, opacity .35s';
+        at(node, tx - w / 2, ty - h / 2); node.style.transform = 'scale(.2)'; node.style.opacity = 0; anim(holder, 'squish');
+      }
+      speak(cfg.each(l)); sfx.pop(); later(() => sparks(cx, cy, 10), 200);
+      if (n === cfg.items.length) {
+        if (cfg.mode === 'load') later(() => { holder.style.transition = 'transform 1.8s cubic-bezier(.5,0,.7,1)'; holder.style.transform = 'translateX(1100px)'; sfx.toot(); }, 1500);
+        finish(cfg, ani, next, cfg.mode === 'load' ? 4200 : 3800);
+      }
+      return true;
+    }, () => say(l));
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+/* tap things to change them (E eggs, L lamps, O shells, Q ducks, S seeds, U umbrellas) */
+function quack() { tone(640, 0, .12, 'sawtooth', .07, 480); tone(620, .16, .14, 'sawtooth', .07, 450); }
+function tapStates(l, next, cfg) {
+  const ani = sideCritter(l, 1390, 560, 190);
+  if (cfg.rain) {
+    let stop = false;
+    loop((dt, t) => {
+      if (stop) return false;
+      if (Math.random() < .5) {
+        const d = mk('i', 'raindrop'); at(d, Math.random() * 1600, -40); scene.append(d);
+        d.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(1000px)' }], { duration: 1100 + Math.random() * 400, easing: 'linear' }).onfinish = () => d.remove();
+      }
+    });
+    cfg._stop = () => { stop = true; };
+  }
+  const xs = [190, 480, 770, 1060]; let doneN = 0;
+  xs.forEach((x, k) => {
+    const o = tObj(cfg.states[0], l, 170, 'abs tapobj popin'); o.style.animationDelay = (.3 + k * .1) + 's';
+    if (cfg.lamp) o.classList.add('off');
+    at(o, x, 470); scene.append(o);
+    const em = o.querySelector('.ie'); let st = 0;
+    o.addEventListener('pointerdown', e => {
+      e.preventDefault(); ac();
+      if (cfg.quack) {
+        quack(); o.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(-60px)' }, { transform: 'translateY(0)' }], { duration: 420 });
+        if (!o.dataset.done) { o.dataset.done = '1'; doneN++; speak(cfg.each(l)); sparks(x + 95, 560, 12); if (doneN === xs.length) finish(cfg, ani, next); }
+        return;
+      }
+      if (o.dataset.done) { anim(o, 'hop'); return; }
+      st++; anim(o, 'wiggle'); tone(420 + st * 140, 0, .12, 'triangle', .12);
+      if (cfg.crack && st === 1) o.insertAdjacentHTML('beforeend', '<svg class="crk" viewBox="0 0 100 20"><path d="M0 10 L15 2 L30 16 L45 3 L60 17 L75 4 L100 12" stroke="#8A5A2B" stroke-width="5" fill="none" stroke-linejoin="round"/></svg>');
+      if (st >= cfg.states.length - 1) {
+        em.textContent = cfg.states[cfg.states.length - 1]; o.querySelector('.crk')?.remove();
+        o.dataset.done = '1'; o.classList.remove('off'); if (cfg.lamp) o.classList.add('glow');
+        doneN++; anim(o, 'hop'); speak(cfg.each(l)); sfx.ding(); sparks(x + 95, 560, 14);
+        if (doneN === xs.length) { if (cfg._stop) later(cfg._stop, 600); finish(cfg, ani, next); }
+      } else em.textContent = cfg.states[st];
+    });
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+/* stack scoops on a cone (I) */
+const CONE = '<svg viewBox="0 0 160 240" width="100%" height="100%"><path d="M8 10 L152 10 L80 232Z" fill="#E8B26A" stroke="#C48A45" stroke-width="5" stroke-linejoin="round"/><path d="M28 50 L132 50 M46 100 L114 100 M62 150 L98 150 M22 12 L102 190 M138 12 L58 190" stroke="#C48A45" stroke-width="4"/></svg>';
+function scoopGame(l, next, cfg) {
+  const ani = sideCritter(l, 1300, 520, 250);
+  const cone = mk('div', 'abs', CONE); cone.style.cssText += 'width:180px;height:270px;z-index:1'; at(cone, 710, 640); scene.append(cone);
+  const cols = ['#FFB3C7', '#A7F0D2', '#C79A7A', '#FFE59A'];
+  let n = 0;
+  cols.forEach((c, k) => {
+    const s = mk('div', 'abs scoop popin L', capHTML(l)); s.style.background = c; s.style.animationDelay = (.3 + k * .12) + 's';
+    at(s, 200 + k * 280, 150); scene.append(s);
+    draggable(s, (cx, cy, node) => {
+      if (Math.abs(cx - 800) > 260 || cy < 260) return false;
+      node.dataset.lock = '1'; at(node, 705, 548 - n * 112); node.style.zIndex = 2 + n; n++;
+      speak(cfg.each(l)); sfx.pop(); anim(cone, 'squish'); later(() => sparks(800, 640 - n * 112, 10), 200);
+      if (n === cols.length) finish(cfg, ani, next);
+      return true;
+    }, () => say(l));
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+/* drag kites up into the sky (K) */
+function kiteSVG(l, [c, e]) {
+  return `<svg viewBox="0 0 120 210" width="100%" height="100%"><path d="M60 4 L112 70 L60 140 L8 70Z" fill="${c}" stroke="${e}" stroke-width="4" stroke-linejoin="round"/><path d="M60 4 V140 M8 70 H112" stroke="#fff" stroke-width="3" opacity=".6"/><path d="M60 140 q-14 14 0 28 q14 14 0 28" stroke="${e}" stroke-width="4" fill="none"/><text x="60" y="92" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="46" fill="#fff">${l}</text></svg>`;
+}
+function kiteGame(l, next, cfg) {
+  const ani = mk('div', 'abs big-ani drop', critter(l)); at(ani, 40, 500); scene.append(ani);
+  const slots = [[420, 140], [800, 100], [1180, 150]], cols = shuffle(PAL);
+  let n = 0;
+  [440, 780, 1120].forEach((x, k) => {
+    const kt = mk('div', 'abs kite popin', kiteSVG(l, cols[k])); kt.style.animationDelay = (.3 + k * .12) + 's';
+    at(kt, x, 640); scene.append(kt);
+    draggable(kt, (cx, cy, node) => {
+      if (cy > 560) return false;
+      node.dataset.lock = '1';
+      node.style.transition = 'left .8s cubic-bezier(.3,1.2,.5,1), top .8s cubic-bezier(.3,1.2,.5,1)';
+      at(node, slots[n][0], slots[n][1]); n++;
+      later(() => node.classList.add('sway'), 800);
+      speak(cfg.each(l)); sfx.whoosh(); later(() => sparks(cx, cy, 10), 200);
+      if (n === 3) finish(cfg, ani, next, 4000);
+      return true;
+    }, () => say(l));
+  });
+  const hand = mk('div', 'hand', '👆'); scene.append(hand);
+  let t0 = performance.now();
+  loop((dt, t) => {
+    if (n > 0) { hand.style.opacity = 0; return false; }
+    const k = ((t - t0) % 2200) / 1400;
+    if (k <= 1) { at(hand, 500, 760 - k * 360); hand.style.opacity = 1; } else hand.style.opacity = 0;
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+/* paint things yellow (Y) */
+function paintGame(l, next, cfg) {
+  const ani = sideCritter(l, 1390, 560, 190);
+  let n = 0;
+  cfg.items.forEach((em, k) => {
+    const o = tObj(em, l, 160, 'abs tapobj gray popin'); o.style.animationDelay = (.3 + k * .1) + 's';
+    const x = 120 + k * 250; at(o, x, 470); scene.append(o);
+    o.addEventListener('pointerdown', e => {
+      e.preventDefault(); ac(); if (o.dataset.done) { anim(o, 'hop'); return; }
+      o.dataset.done = '1'; o.classList.remove('gray'); n++;
+      const sp = mk('div', 'abs splash'); at(sp, x - 20, 440); scene.append(sp);
+      tone(500 + n * 90, 0, .2, 'sine', .14); sparks(x + 88, 560, 12); anim(o, 'hop');
+      speak(n === cfg.items.length ? [l, 'yellow!'] : cfg.each(l));
+      if (n === cfg.items.length) finish(cfg, ani, next);
+    });
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+/* color the rainbow (R) */
+function rainbowGame(l, next, cfg) {
+  const ani = mk('div', 'abs big-ani popin', critter(l)); ani.style.width = '240px'; ani.style.height = '324px'; at(ani, 680, 560); scene.append(ani);
+  const C = [['#FF6B6B', 'Red!'], ['#FFA94D', 'Orange!'], ['#FFD43B', 'Yellow!'], ['#69DB7C', 'Green!'], ['#4DABF7', 'Blue!'], ['#B197FC', 'Purple!']];
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 1600 1000'); svg.setAttribute('class', 'abs rainbow');
+  svg.style.cssText = 'left:0;top:0;width:1600px;height:1000px;z-index:1';
+  let n = 0;
+  C.forEach(([col, word], i) => {
+    const r = 560 - i * 52, p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', `M ${800 - r} 900 A ${r} ${r} 0 0 1 ${800 + r} 900`);
+    p.setAttribute('fill', 'none'); p.setAttribute('stroke', '#E3E8F0'); p.setAttribute('stroke-width', 48); p.setAttribute('stroke-linecap', 'round');
+    p.style.pointerEvents = 'stroke'; p.style.cursor = 'pointer'; p.style.transition = 'stroke .4s';
+    p.addEventListener('pointerdown', e => {
+      e.preventDefault(); ac(); if (p.dataset.done) return;
+      p.dataset.done = '1'; p.setAttribute('stroke', col); n++;
+      tone(523 * Math.pow(1.122, i), 0, .5, 'sine', .16); const q = pt(e); sparks(q.x, q.y, 10);
+      speak(n === C.length ? [l, 'rainbow!'] : [word]);
+      if (n === C.length) { anim(ani, 'hop'); finish(cfg, ani, next); }
+    });
+    svg.append(p);
+  });
+  scene.append(svg);
+  ['☁️', '☁️'].forEach((c, k) => { const d = mk('div', 'abs', c); d.style.cssText += 'font-size:150px;line-height:1;z-index:2;pointer-events:none'; at(d, k ? 1290 : 140, 800); scene.append(d); });
+  later(() => speak(cfg.start), 700);
+}
+
+/* hop across lily pads (F) */
+function hopGame(l, next, cfg) {
+  const pond = mk('div', 'abs pond'); at(pond, 220, 200); scene.append(pond);
+  const frog = mk('div', 'abs big-ani', critter(l)); frog.style.cssText += 'width:170px;height:230px;z-index:5'; at(frog, 40, 420); scene.append(frog);
+  const cols = [330, 610, 890, 1170], rows = [250, 470, 690];
+  let round = 0;
+  function column() {
+    const tRow = rand(3), conf = shuffle(CONF[l] || []);
+    let lock = false;
+    const pads = rows.map((y, r) => {
+      const ch = r === tRow ? l : conf[r % conf.length];
+      const p = mk('button', 'abs pad popin L', capHTML(ch)); p.type = 'button'; p.style.animationDelay = (r * .1) + 's';
+      at(p, cols[round], y); scene.append(p);
+      p.addEventListener('click', () => {
+        if (lock) return; ac();
+        if (ch !== l) { anim(p, 'shake'); noise(0, .25, .25, 900, .6); return; }
+        lock = true;
+        const x0 = parseFloat(frog.style.left), y0 = parseFloat(frog.style.top), x1 = cols[round] + 15, y1 = y - 150;
+        frog.animate([{ left: x0 + 'px', top: y0 + 'px' }, { left: (x0 + x1) / 2 + 'px', top: Math.min(y0, y1) - 170 + 'px' }, { left: x1 + 'px', top: y1 + 'px' }], { duration: 620, easing: 'ease-in-out' });
+        at(frog, x1, y1); sfx.boing(); speak([l, 'hop!']);
+        later(() => { sparks(x1 + 85, y1 + 200, 10); pads.forEach(o => { if (o !== p) { o.style.transition = 'opacity .4s'; o.style.opacity = 0; } }); }, 640);
+        round++;
+        if (round < cols.length) later(() => { column(); speak(['Hop on', l]); }, 1300);
+        else finish(cfg, frog, next, 3600);
+      });
+      return p;
+    });
+  }
+  column();
+  later(() => speak(cfg.start.concat([l])), 700);
+}
+
+/* whack-a-mouse (M) */
+function whackGame(l, next, cfg) {
+  const ani = sideCritter(l, 1400, 600, 180);
+  const holes = [[330, 360], [700, 360], [1070, 360], [330, 640], [700, 640], [1070, 640]];
+  let n = 0, over = false;
+  const H = holes.map(([x, y]) => {
+    const h = mk('div', 'abs hole'); at(h, x, y + 180); scene.append(h);
+    const clip = mk('div', 'abs mclip'); at(clip, x, y); scene.append(clip);
+    const m = tObj('🐭', l, 140, 'mouse'); clip.append(m);
+    const s = { m, up: false, x, y };
+    m.addEventListener('pointerdown', e => {
+      e.preventDefault(); ac(); if (!s.up || over) return;
+      s.up = false; m.classList.remove('up'); n++;
+      tone(900, 0, .1, 'square', .06, 1300); sparks(x + 110, y + 120, 12); speak([l, 'mouse!']);
+      if (n >= 6) { over = true; finish(cfg, ani, next); }
+    });
+    return s;
+  });
+  function popOne() {
+    if (over) return;
+    const free = H.filter(s => !s.up);
+    if (free.length) {
+      const s = pick(free); s.up = true; s.m.classList.add('up'); tone(700, 0, .08, 'sine', .06, 900);
+      later(() => { if (s.up) { s.up = false; s.m.classList.remove('up'); } }, 2300);
+    }
+    later(popOne, 1200);
+  }
+  later(popOne, 1200);
+  later(() => speak(cfg.start), 700);
+}
+
+/* zip up the jackets (Z) */
+function zipGame(l, next, cfg) {
+  const ani = sideCritter(l, 1390, 560, 190);
+  const cols = shuffle(PAL), K = 3, bg = (THEME[l] || { sky: ['#fff', '#fff'] }).sky[1];
+  let done = 0;
+  [200, 590, 980].forEach((X, k) => {
+    const Y = 300, wrap = mk('div', 'abs jacket popin'); wrap.style.animationDelay = (.3 + k * .12) + 's'; at(wrap, X, Y); scene.append(wrap);
+    const [c, e] = cols[k];
+    const draw = py => {
+      const g = 16 * (py - 12) / 108;
+      wrap.innerHTML = `<svg viewBox="0 0 100 130" width="300" height="390"><path d="M20 10 L40 4 Q50 12 60 4 L80 10 L98 40 L84 48 L84 126 L16 126 L16 48 L2 40Z" fill="${c}" stroke="${e}" stroke-width="2.5" stroke-linejoin="round"/><polygon points="${50 - g},9 ${50 + g},9 50,${py}" fill="${bg}"/><line x1="50" y1="${py}" x2="50" y2="125" stroke="#fff" stroke-width="3" stroke-dasharray="3 2"/><text x="30" y="90" text-anchor="middle" font-family="Baloo 2, Arial Rounded MT Bold, sans-serif" font-weight="800" font-size="22" fill="#fff">${l}</text></svg>`;
+    };
+    let py = 120; draw(py);
+    const pull = mk('div', 'abs zpull'); scene.append(pull);
+    const place = () => at(pull, X + 50 * K - 40, Y + py * K - 40);
+    place();
+    let id = null, oy = 0, fin = false;
+    pull.addEventListener('pointerdown', ev => { ev.preventDefault(); ac(); if (fin) return; id = ev.pointerId; pull.setPointerCapture(id); oy = pt(ev).y - (Y + py * K); });
+    pull.addEventListener('pointermove', ev => {
+      if (ev.pointerId !== id || fin) return;
+      const ny = Math.max(12, Math.min(120, (pt(ev).y - oy - Y) / K));
+      if (Math.abs(ny - py) > 4) tone(1400 + Math.random() * 300, 0, .03, 'square', .025);
+      py = ny; draw(py); place();
+      if (py <= 14) {
+        fin = true; done++; py = 12; draw(py); place(); pull.classList.add('ok');
+        speak([l, 'zip!']); sfx.ding(); sparks(X + 150, Y + 40, 14); anim(wrap, 'hop');
+        if (done === 3) finish(cfg, ani, next);
+      }
+    });
+    const up = ev => { if (ev.pointerId === id) id = null; };
+    pull.addEventListener('pointerup', up); pull.addEventListener('pointercancel', up);
+  });
+  const hand = mk('div', 'hand', '👆'); scene.append(hand);
+  let t0 = performance.now();
+  loop((dt, t) => {
+    if (done > 0) { hand.style.opacity = 0; return false; }
+    const k = ((t - t0) % 2400) / 1500;
+    if (k <= 1) { at(hand, 330, 640 - k * 300); hand.style.opacity = 1; } else hand.style.opacity = 0;
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+/* rub to reveal (W foam on windows, X sand on treasure) */
+function rubGame(l, next, cfg) {
+  const ani = sideCritter(l, 1390, 560, 190);
+  const hand = mk('div', 'hand', '👆'); scene.append(hand);
+  let found = 0, lastAct = performance.now();
+  const spots = [190, 590, 990].map(x => ({ x, done: false }));
+  spots.forEach((sp, k) => {
+    const x = sp.x, sand = cfg.cover === 'sand';
+    const y = sand ? 650 : 330;
+    if (!sand) { const fr = mk('div', 'abs wframe'); at(fr, x - 20, y - 20); scene.append(fr); }
+    const rv = tObj(cfg.reveals[k % cfg.reveals.length], l, 150, 'abs'); rv.style.zIndex = 2; at(rv, x + 55, sand ? y + 20 : y + 50); scene.append(rv);
+    const cv = mk('div', 'abs ' + (sand ? 'sandpile' : 'foam') + ' popin');
+    if (sand) cv.innerHTML = '<svg viewBox="0 0 300 200" width="100%" height="100%"><path d="M0 200 C10 90 80 40 150 38 C220 40 290 90 300 200Z" fill="#E9C989"/><path d="M118 70 L182 130 M182 70 L118 130" stroke="#E2463F" stroke-width="14" stroke-linecap="round"/></svg>';
+    cv.style.animationDelay = (k * .12) + 's'; at(cv, x, sand ? y - 20 : y); scene.append(cv);
+    let dist = 0, acc = 0, id = null, lx = 0, ly = 0;
+    cv.addEventListener('pointerdown', e => { e.preventDefault(); ac(); if (sp.done) return; id = e.pointerId; cv.setPointerCapture(id); const p = pt(e); lx = p.x; ly = p.y; lastAct = performance.now(); });
+    cv.addEventListener('pointermove', e => {
+      if (e.pointerId !== id || sp.done) return;
+      const p = pt(e), d = Math.hypot(p.x - lx, p.y - ly); lx = p.x; ly = p.y; dist += d; acc += d;
+      lastAct = performance.now(); hand.style.opacity = 0;
+      if (acc > 50) { acc = 0; if (sand) dirt(p.x, p.y); else sparks(p.x, p.y, 3, ['#FFFFFF', '#D6EEFF']); noise(0, .06, .15, sand ? 500 : 2500, .7); }
+      const pr = Math.min(1, dist / 800);
+      if (sand) cv.style.transform = `scaleY(${1 - pr * .9})`; else cv.style.opacity = 1 - pr * .85;
+      if (pr >= 1) {
+        sp.done = true; cv.style.transition = 'opacity .4s'; cv.style.opacity = 0; rv.style.zIndex = 5;
+        anim(rv, 'hop'); sfx.ding(); sparks(x + 140, y + 120, 14); speak(cfg.each(l, k)); found++;
+        if (found === spots.length) finish(cfg, ani, next, 4200);
+      }
+    });
+    const up = e => { if (e.pointerId === id) id = null; };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+  });
+  loop((dt, t) => {
+    const r = spots.find(s => !s.done);
+    if (!r) { hand.style.opacity = 0; return false; }
+    if (performance.now() - lastAct > 3000) { hand.style.opacity = 1; at(hand, r.x + 110 + Math.sin(t / 180) * 70, cfg.cover === 'sand' ? 720 : 450); }
+  });
+  later(() => speak(cfg.start), 700);
+}
+
+Object.assign(GAMES, {
+  E: (l, n) => tapStates(l, n, { states: ['🥚', '🥚', '🐣'], crack: true, start: ['Tap the eggs!'], each: l => [l, 'egg!'], end: ['Peep, peep!', 'Baby chicks!'] }),
+  F: (l, n) => hopGame(l, n, { start: ['Hop on'], end: ['Yay!', 'Good jumping, frog!'] }),
+  G: (l, n) => collectGame(l, n, { item: '🍇', start: ['Pick the grapes!'], each: l => [l, 'grapes!'], end: ['Yummy!', 'Grapes for the giraffe!'] }),
+  H: (l, n) => dragTo(l, n, { mode: 'wear', items: ['🎩', '👒', '🧢', '👑'], start: ['Put on a hat!'], each: l => [l, 'hat!'], end: ['So silly!', 'Happy hippo!'] }),
+  I: (l, n) => scoopGame(l, n, { start: ['Stack the ice cream!'], each: l => [l, 'ice cream!'], end: ['Yum!', 'Ice cream for the iguana!'] }),
+  J: (l, n) => popGame(l, n, { item: '🪼', start: ['Tap the jellyfish!'], word: 'Jellyfish!', end: ['Yay!', 'Jiggly jellyfish!'] }),
+  K: (l, n) => kiteGame(l, n, { start: ['Fly the kites!', 'Pull them up!'], each: l => [l, 'kite!'], end: ['Wheee!', 'The kites can fly!'] }),
+  L: (l, n) => tapStates(l, n, { states: ['💡', '💡'], lamp: true, start: ['Turn on the lights!'], each: l => [l, 'light!'], end: ['So bright!', 'The lion is happy!'] }),
+  M: (l, n) => whackGame(l, n, { start: ['Catch the mice!'], end: ['Yay!', 'Silly mice!'] }),
+  N: (l, n) => dragTo(l, n, { mode: 'fill', items: ['🐣', '🐥', '🐤', '🐣'], start: ['Help the birds go home!'], each: l => [l, 'nest!'], end: ['Good night!', 'Night, night, birds!'] }),
+  O: (l, n) => tapStates(l, n, { states: ['🐚', '🦪'], start: ['Open the shells!'], each: l => [l, 'open!'], end: ['Wow!', 'Pretty pearls!'] }),
+  P: (l, n) => dragTo(l, n, { mode: 'place', items: ['🍄', '🧀', '🍅', '🫑', '🍍'], start: ['Make a pizza!'], each: l => [l, 'pizza!'], end: ['Yum, yum!', 'Pizza for the penguin!'] }),
+  Q: (l, n) => tapStates(l, n, { states: ['🦆', '🦆'], quack: true, start: ['Tap the ducks!'], each: () => ['Quack, quack!'], end: ['Q', 'is for quack!'] }),
+  R: (l, n) => rainbowGame(l, n, { start: ['Color the rainbow!'], end: ['Beautiful!', 'A big rainbow!'] }),
+  S: (l, n) => tapStates(l, n, { states: ['🌱', '🌿', '🌻'], start: ['Grow the sunflowers!'], each: l => [l, 'sunflower!'], end: ['So tall!', 'Sunny sunflowers!'] }),
+  T: stack,
+  U: (l, n) => tapStates(l, n, { states: ['🌂', '☂️'], rain: true, start: ['It is raining!', 'Open the umbrellas!'], each: l => [l, 'umbrella!'], end: ['Yay!', 'We stay dry!'] }),
+  V: (l, n) => dragTo(l, n, { mode: 'load', items: ['🥕', '🥦', '🌽', '🍆'], start: ['Load the van!'], each: l => [l, 'van!'], end: ['Vroom, vroom!', 'Off we go!'] }),
+  W: (l, n) => rubGame(l, n, { cover: 'foam', reveals: ['🍉', '🐋', '🪱'], start: ['Wash the windows!'], each: (l, k) => [l, ['watermelon!', 'whale!', 'worm!'][k]], end: ['Wow!', 'So clean!'] }),
+  X: (l, n) => rubGame(l, n, { cover: 'sand', reveals: ['💎', '👑', '🪙'], start: ['X marks the spot!', 'Dig for treasure!'], each: () => ['Treasure!'], end: ['Hooray!', 'X marks the spot!'] }),
+  Y: (l, n) => paintGame(l, n, { items: ['🌞', '⭐', '🐥', '🍋', '🍌'], start: ['Paint it yellow!'], each: () => ['Yellow!'], end: ['Yay!', 'So yellow!'] }),
+  Z: (l, n) => zipGame(l, n, { start: ['Zip up the jackets!'], end: ['Zip, zip!', 'All zipped up!'] })
+});
+
+/* pick the right letter out of three */
+function choose(l, next) {
+  const ani = sideCritter(l, 1390, 620, 180);
+  let round = 0;
+  function play() {
+    scene.querySelectorAll('.ccard').forEach(c => c.remove());
+    const conf = shuffle(CONF[l] || L.filter(x => x !== l)).slice(0, 2);
+    const opts = shuffle([l, ...conf]), cols = shuffle(PAL);
+    let lock = false;
+    opts.forEach((x, k) => {
+      const c = mk('button', 'abs ccard popin L', capHTML(x)); c.type = 'button'; c.setAttribute('aria-label', x);
+      c.style.color = cols[k][0]; c.style.animationDelay = (k * .12) + 's';
+      at(c, 170 + k * 400, 250); scene.append(c);
+      c.addEventListener('click', () => {
+        if (lock) return; ac();
+        if (x === l) {
+          lock = true; c.classList.add('right'); anim(c, 'hop'); anim(ani, 'hop'); sfx.ding(); sparks(340 + k * 400, 450, 16);
+          speak([l, pick(['Yes!', 'You got it!', 'Great job!'])]); round++;
+          later(round < 3 ? play : () => { flowers(20); sfx.fanfare(); praise(); later(next, 2400); }, 2300);
+        } else { anim(c, 'shake'); sfx.boop(); speak([x]); later(() => { if (!lock) speak(['Which one is', l]); }, 1200); }
+      });
+    });
+    later(() => speak(['Which one is', l]), 600);
+  }
+  play();
+}
+
+/* 8. celebrate: chant + sticker */
+function celebrate(l, next) {
+  const [c] = pal(l);
+  const w = letterSVG(l, 440, [{ cls: 'ink', color: c, w: 14 }]); at(w, 330, 230); w.classList.add('popin'); scene.append(w);
+  const ani = mk('div', 'abs big-ani popin', critter(l)); at(ani, 900, 420); scene.append(ani);
+  flowers(24); sfx.fanfare();
+  later(() => speak(CHANT(l)), 600);
+  [0, 750, 1500].forEach(t => later(() => { anim(w, 'hop'); anim(ani, 'hop'); }, 700 + t));
+  later(() => {
+    const st = mk('div', 'sticker popin', critter(l)); at(st, 650, 260); scene.append(st);
+    sfx.ding(); speak(['You got a sticker!']);
+    later(() => {
+      st.style.transition = 'left .8s cubic-bezier(.5,0,.3,1), top .8s cubic-bezier(.5,0,.3,1), transform .8s cubic-bezier(.5,0,.3,1), opacity .3s .7s';
+      at(st, 40, 40); st.style.transform = 'scale(.3)'; st.style.opacity = 0;
+    }, 2000);
+  }, 3000);
+  later(() => {
+    const i = L.indexOf(l), nl = L[i + 1];
+    const tag = mk('button', 'nextTag go L', nl ? `<span class="e">${critter(nl)}</span>${capHTML(nl)}` : '<span class="e">🚂</span>');
+    tag.type = 'button'; tag.setAttribute('aria-label', '다음');
+    tag.addEventListener('click', () => { sfx.toot(); next(); });
+    scene.append(tag);
+  }, 5600);
+}
+
+/* ================= parent panels ================= */
+function overlay(title) {
+  const ov = mk('div', 'overlay'), sh = mk('div', 'sheet');
+  sh.innerHTML = `<div class="sheet-head"><span>${title}</span><button class="close" type="button" aria-label="닫기">✕</button></div><div class="sheet-body"></div>`;
+  ov.append(sh); stage.append(ov);
+  const close = () => ov.remove();
+  sh.querySelector('.close').addEventListener('click', close);
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  return sh.querySelector('.sheet-body');
+}
+function openBook() {
+  const body = overlay(`스티커북 ${done.size} / 26`);
+  const g = mk('div', 'grid'); body.append(g);
+  L.forEach(l => {
+    const got = done.has(l);
+    const cell = mk('button', 'cell' + (got ? ' got' : ''), (got ? critter(l) : '') + `<b class="L">${capHTML(l)}</b>`);
+    cell.type = 'button'; cell.setAttribute('aria-label', l);
+    cell.addEventListener('click', () => { if (got) { speak(INTRO(l)); anim(cell, 'hop'); } else { say(l); } });
+    g.append(cell);
+  });
+}
+function openSettings() {
+  loadVoices();
+  const body = overlay('음성 설정');
+  const note = mk('p', 'pnote', canSpeak ? '아이에게 들려줄 영어 음성을 골라 주세요. 누르면 바로 들어볼 수 있어요.' : '이 화면에서는 음성 기능을 쓸 수 없어요. Chrome에서 링크를 열어 주세요.');
+  body.append(note);
+  const fsRow = mk('div', 'rrow', '<span>전체 화면</span>'); body.append(fsRow);
+  [['항상 켜기', true], ['끄기', false]].forEach(([t, v]) => {
+    const b = mk('button', 'vbtn' + (autoFS === v ? ' on' : ''), t); b.type = 'button';
+    b.addEventListener('click', () => { autoFS = v; store('abc2-fs', v); fsRow.querySelectorAll('.vbtn').forEach(x => x.classList.toggle('on', x === b)); if (v) goFS(); else exitFS(); });
+    fsRow.append(b);
+  });
+  if (standalone) fsRow.append(mk('span', 'pnote', '홈 화면 앱으로 실행 중이라 이미 전체 화면이에요.'));
+  else if (!fsReq || fsFailed) fsRow.append(mk('span', 'pnote', '이 화면에서는 전체 화면이 지원되지 않아요. 홈 화면 아이콘으로 열어 주세요.'));
+  body.append(mk('div', '', '<br>'));
+  if (!canSpeak) return;
+  const list = mk('div', 'vlist'); body.append(list);
+  if (!voices.length) list.append(mk('p', 'pnote', '이 기기에 영어 음성이 없어요. 기기 설정에서 Google 음성 서비스의 영어(미국) 음성을 내려받아 주세요.'));
+  voices.forEach(v => {
+    const b = mk('button', 'vbtn' + (voice && v.voiceURI === voice.voiceURI ? ' on' : ''), `${v.name}<small>${v.lang}</small>`);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      voice = v; store('abc2-voice', v.voiceURI);
+      list.querySelectorAll('.vbtn').forEach(x => x.classList.toggle('on', x === b));
+      speak(['Hi there!', 'A', 'is for apple.']);
+    });
+    list.append(b);
+  });
+  const row = mk('div', 'rrow', '<span>말하기 속도</span>'); body.append(row);
+  [['천천히', .72], ['보통', .85], ['조금 빠르게', .95]].forEach(([t, r]) => {
+    const b = mk('button', 'vbtn' + (Math.abs(rate - r) < .01 ? ' on' : ''), t); b.type = 'button';
+    b.addEventListener('click', () => { rate = r; store('abc2-rate', r); row.querySelectorAll('.vbtn').forEach(x => x.classList.toggle('on', x === b)); speak(['Great job!']); });
+    row.append(b);
+  });
+  body.append(mk('p', 'pnote', '목소리가 딱딱하게 들리면 기기 설정에서 Google 음성 서비스의 고품질 영어(미국) 음성을 내려받은 뒤 여기서 다시 골라 주세요.'));
+}
+$('#bookBtn').addEventListener('click', openBook);
+$('#gearBtn').addEventListener('click', openSettings);
+
+/* ================= boot ================= */
+window.__abc = { startLesson, runStep: i => runStep(i), showTrain };
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+showTrain();
+})();
+</script>
+</body>
+</html>
